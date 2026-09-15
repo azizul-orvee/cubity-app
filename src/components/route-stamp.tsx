@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CubityStampLoader } from "@/components/cubity-stamp-loader";
 
-const MIN_STAMP_MS = 1100;
+const MIN_STAMP_MS = 1400;
 
 function isAppNavigation(anchor: HTMLAnchorElement) {
   if (anchor.target === "_blank") return false;
