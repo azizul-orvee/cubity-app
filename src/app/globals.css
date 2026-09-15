@@ -165,3 +165,91 @@ select {
   scroll-margin-top: 6rem;
   scroll-margin-bottom: 8rem;
 }
+
+@keyframes cubity-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cubity-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes cubity-iris {
+  0% { clip-path: circle(34% at 50% 50%); opacity: 0.75; }
+  100% { clip-path: circle(72% at 50% 50%); opacity: 1; }
+}
+
+@keyframes cubity-stamp {
+  0% { transform: scale(0.78) rotate(-10deg); opacity: 0.7; }
+  58% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+  78% { transform: scale(0.96) rotate(-1.5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes cubity-pulse-ring {
+  0% { transform: scale(0.62); opacity: 0.5; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+@keyframes cubity-cube-in {
+  0% { transform: scale(0.2) rotate(20deg); opacity: 0; }
+  70% { transform: scale(1.12) rotate(-6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes cubity-letter {
+  0% { letter-spacing: 0.55em; opacity: 0; }
+  100% { letter-spacing: 0.28em; opacity: 1; }
+}
+
+@keyframes cubity-scan {
+  0% { top: 10%; opacity: 0; }
+  12% { opacity: 0.95; }
+  88% { opacity: 0.95; }
+  100% { top: 86%; opacity: 0; }
+}
+
+.cubity-stamp {
+  --cubity: #128C86;
+}
+
+.cubity-stamp-orbit {
+  animation: cubity-spin 7s linear infinite;
+}
+
+.cubity-stamp-orbit-rev {
+  animation: cubity-spin-rev 11s linear infinite;
+}
+
+.cubity-stamp-pulse {
+  animation: cubity-pulse-ring 1.8s ease-out infinite;
+}
+
+.cubity-stamp-seal {
+  animation: cubity-iris 1.1s cubic-bezier(0.22, 1, 0.36, 1) both,
+    cubity-stamp 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.cubity-stamp-cube {
+  animation: cubity-cube-in 0.7s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.cubity-stamp-word {
+  animation: cubity-letter 0.9s ease-out 0.25s both;
+}
+
+.cubity-stamp-scan {
+  animation: cubity-scan 1.7s ease-in-out 0.35s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cubity-stamp-orbit,
+  .cubity-stamp-orbit-rev,
+  .cubity-stamp-pulse,
+  .cubity-stamp-seal,
+  .cubity-stamp-cube,
+  .cubity-stamp-word,
+  .cubity-stamp-scan {
+    animation: none;
+  }
+}

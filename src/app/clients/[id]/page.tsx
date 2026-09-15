@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileDown, MessageCircle, Pencil, Phone, Plus, Wallet } from "lucide-react";
 import { DeleteClientButton, DeleteEntryButton } from "@/components/delete-buttons";
+import { PdfDownload } from "@/components/pdf-download";
 import { DueStatusBadge } from "@/components/due-status-badge";
 import { PromisedDateForm } from "@/components/promised-date-form";
 import { formatDate } from "@/lib/dates";
@@ -75,13 +76,15 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         <Action href={`/clients/${client.id}/pay`} icon={<Wallet className="size-5" />} label="Log payment" />
       </div>
 
-      <a
+      <PdfDownload
         href={`/clients/${client.id}/statement`}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold ring-1 ring-border"
+        title="Download due statement?"
+        description={`This saves ${client.name}'s ledger as a PDF on this device.`}
+        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold ring-1 ring-border"
       >
         <FileDown className="size-4 text-primary" />
         Download due statement
-      </a>
+      </PdfDownload>
 
       <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
         <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">

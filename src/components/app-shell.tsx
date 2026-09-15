@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { PdfDownload } from "@/components/pdf-download";
+import { RouteStamp } from "@/components/route-stamp";
 
 const tabs = [
   { href: "/", label: "Home", icon: LayoutDashboard },
@@ -77,6 +79,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
+      <RouteStamp />
+
       {formScreen ? null : (
       <nav className="app-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-4 px-2 pt-1">
@@ -97,13 +101,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          <a
+          <PdfDownload
             href="/reports/outstanding"
-            className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
+            title="Download outstanding PDF?"
+            description="This saves a company-wide list of every client who still owes Cubity."
+            className="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
           >
             <FileDown className="size-5" />
             PDF
-          </a>
+          </PdfDownload>
           <Link
             href="/clients/new"
             className="-mt-5 flex flex-col items-center justify-center text-[11px] font-semibold text-primary"

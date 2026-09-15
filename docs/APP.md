@@ -35,7 +35,7 @@ Name and phone are required to create a client. Email and address are optional. 
 | Where | What it does |
 | --- | --- |
 | `/` Dashboard | Visual cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp |
-| `/clients` | Search and filter clients (all / with dues / overdue / settled) |
+| `/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Home shows the Cubity survey-stamp loader while the list loads from the database. |
 | `/clients/new` | Add a client: name and phone required, email and address optional |
 | `/clients/[id]` | Ledger, outstanding, promised date, call/WhatsApp, PDF, delete |
 | `/clients/[id]/edit` | Edit profile |
@@ -78,12 +78,15 @@ Mobile-first visual summary (not a table dump):
 - Overdue and upcoming queues
 - Cubity office stamp (Sylhet address, three phones, email)
 
-Bottom navigation on phones: Home, Clients, company PDF, Add client (center plus).
+Bottom navigation on phones: Home, Clients, company PDF (asks to confirm before download), Add client (center plus).
+
+Opening Clients (or a client account) from Home shows a **survey-stamp loader**: the Cubity seal iris-reveals and stamps in, compass rings spin, and a scan line reads the logo while the database catches up. Same animation on the website and in the Android app.
 
 ### PDFs
 
 - Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised, a gap before the ledger, **Pending** column, and outstanding amounts in red. Footer uses location, phone, and email icons.
 - Company **outstanding receivables** list with office address and phones
+- Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
 ### Extra (beyond the original request)
 
@@ -154,6 +157,7 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Added a Cubity-logo survey-stamp loader while Clients (and client accounts) load from the database, and a confirm dialog before any PDF download. Both work on the website and in the Android app without a new APK.
 - 2026-09-16 — Opened up the clients list and client account pages with more space, quieter type, and larger tap targets. The add-client form now lifts above the Android keyboard so Address stays visible.
 - 2026-09-16 — Stopped sideways pan in the Android app, pinned a teal status bar so scroll no longer covers the clock, made dashboard rings shrink to the phone width, and used a solid app header.
 - 2026-09-16 — Set up a Pixel 7 emulator (`Cubity_Phone`) on this Mac so the APK can be installed and checked locally.
