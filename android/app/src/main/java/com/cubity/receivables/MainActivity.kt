@@ -59,13 +59,14 @@ class MainActivity : AppCompatActivity() {
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
             )
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
             statusInset.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 bars.top,
             )
             navInset.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                bars.bottom,
+                maxOf(bars.bottom, ime.bottom),
             )
             WindowInsetsCompat.CONSUMED
         }
@@ -265,20 +266,47 @@ class MainActivity : AppCompatActivity() {
               var root = document.documentElement;
               if (!root) return;
               root.classList.add('cubity-app');
-              if (document.getElementById('cubity-app-chrome')) return;
-              var style = document.createElement('style');
-              style.id = 'cubity-app-chrome';
-              style.textContent = [
-                'html.cubity-app, html.cubity-app body {',
-                '  overflow-x: clip !important;',
-                '  max-width: 100% !important;',
-                '  overscroll-behavior-x: none;',
-                '  touch-action: pan-y;',
-                '}',
-                'html.cubity-app .app-header-inner { padding-top: 0 !important; }',
-                'html.cubity-app .app-bottom-nav { padding-bottom: 0 !important; }'
-              ].join('');
-              (document.head || root).appendChild(style);
+              if (!document.getElementById('cubity-app-chrome')) {
+                var style = document.createElement('style');
+                style.id = 'cubity-app-chrome';
+                style.textContent = [
+                  'html.cubity-app, html.cubity-app body {',
+                  '  overflow-x: clip !important;',
+                  '  max-width: 100% !important;',
+                  '  overscroll-behavior-x: none;',
+                  '  touch-action: pan-y;',
+                  '}',
+                  'html.cubity-app .app-header-inner { padding-top: 0 !important; }',
+                  'html.cubity-app .app-bottom-nav { padding-bottom: 0 !important; }',
+                  'html.keyboard-open .app-bottom-nav { display: none !important; }',
+                  'html.keyboard-open .app-main { padding-bottom: 1.5rem !important; }',
+                  'input, textarea, select { scroll-margin-top: 6rem; scroll-margin-bottom: 8rem; }'
+                ].join('');
+                (document.head || root).appendChild(style);
+              }
+              if (window.__cubityKeyboard) return;
+              window.__cubityKeyboard = true;
+              function hideFormNav() {
+                if (/\\/clients\\/new$|\\/clients\\/[^/]+\\/(edit|due|pay)$/.test(location.pathname)) {
+                  var nav = document.querySelector('.app-bottom-nav');
+                  if (nav) nav.style.display = 'none';
+                }
+              }
+              hideFormNav();
+              var vv = window.visualViewport;
+              if (!vv) return;
+              function sync() {
+                var open = (window.innerHeight - vv.height) > 100;
+                root.classList.toggle('keyboard-open', open);
+                var el = document.activeElement;
+                if (open && el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+                  setTimeout(function () {
+                    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                  }, 80);
+                }
+              }
+              vv.addEventListener('resize', sync);
+              vv.addEventListener('scroll', sync);
             })();
         """
     }

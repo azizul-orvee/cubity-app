@@ -11,7 +11,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { DueStatusBadge } from "@/components/due-status-badge";
-import { formatDate } from "@/lib/dates";
 import { clientStatus } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
 import { getClients } from "@/lib/queries";
@@ -23,7 +22,7 @@ const filters = [
   { value: "settled", label: "Settled" },
 ];
 
-const AVATAR = ["#2EC4B6", "#38BDF8", "#818CF8", "#F59E0B", "#FB7185", "#34D399"];
+const AVATAR = ["#0F766E", "#128C86", "#2563EB", "#7C3AED", "#B45309", "#BE123C"];
 
 function initials(name: string) {
   return name
@@ -58,22 +57,32 @@ export default async function ClientsPage({
     });
 
   return (
-    <div className="grid gap-5">
-      <div>
-        <h1 className="text-[1.65rem] font-semibold tracking-tight">Clients</h1>
-        <p className="text-sm text-muted-foreground">
-          {clients.length} on Cubity&apos;s book
-        </p>
+    <div className="grid gap-8">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+            Accounts
+          </p>
+          <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Clients</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {clients.length} {clients.length === 1 ? "account" : "accounts"} on Cubity&apos;s book
+          </p>
+        </div>
       </div>
 
-      <form className="grid gap-3">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input name="q" defaultValue={q} placeholder="Search name, phone, site" className="pl-10" />
+      <form className="grid gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+          <div className="relative min-w-0">
+            <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              name="q"
+              defaultValue={q}
+              placeholder="Search name, phone, site"
+              className="h-14 rounded-2xl pl-11"
+            />
           </div>
           <input type="hidden" name="filter" value={filter} />
-          <Button type="submit" variant="outline">
+          <Button type="submit" variant="outline" className="h-14 shrink-0 rounded-2xl px-5">
             Search
           </Button>
         </div>
@@ -84,8 +93,8 @@ export default async function ClientsPage({
               href={`/clients?filter=${item.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
               className={
                 filter === item.value
-                  ? "inline-flex min-h-10 shrink-0 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
-                  : "inline-flex min-h-10 shrink-0 items-center rounded-full bg-white px-4 text-sm font-medium text-muted-foreground ring-1 ring-border"
+                  ? "inline-flex min-h-11 shrink-0 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
+                  : "inline-flex min-h-11 shrink-0 items-center rounded-full bg-white px-5 text-sm font-medium text-muted-foreground ring-1 ring-border"
               }
             >
               {item.label}
@@ -116,32 +125,33 @@ export default async function ClientsPage({
           ) : null}
         </Empty>
       ) : (
-        <div className="grid gap-2">
+        <div className="grid gap-3">
           {rows.map(({ client, status }, index) => (
             <Link
               key={client.id}
               href={`/clients/${client.id}`}
-              className="flex min-h-[4.5rem] items-center gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-border"
+              className="flex items-start gap-4 rounded-[1.5rem] bg-white px-5 py-5 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
             >
               <span
-                className="grid size-12 shrink-0 place-items-center rounded-2xl text-sm font-semibold text-white"
+                className="grid size-14 shrink-0 place-items-center rounded-full text-sm font-semibold tracking-wide text-white"
                 style={{ backgroundColor: AVATAR[index % AVATAR.length] }}
               >
                 {initials(client.name)}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{client.name}</p>
-                <p className="truncate text-xs text-muted-foreground">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate text-[17px] font-semibold tracking-tight">{client.name}</p>
+                  <p className="shrink-0 text-lg font-semibold tabular-nums tracking-tight text-[#0F766E]">
+                    {formatMoney(status.outstanding)}
+                  </p>
+                </div>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
                   {client.phone}
                   {client.siteName ? ` · ${client.siteName}` : ""}
                 </p>
-                {status.promised && status.outstanding > 0 ? (
-                  <p className="text-[11px] text-muted-foreground">Promised {formatDate(status.promised)}</p>
-                ) : null}
-              </div>
-              <div className="text-right">
-                <p className="text-base font-semibold text-[#128C86]">{formatMoney(status.outstanding)}</p>
-                <DueStatusBadge status={status} />
+                <div className="mt-2.5">
+                  <DueStatusBadge status={status} />
+                </div>
               </div>
             </Link>
           ))}

@@ -147,10 +147,21 @@ html.cubity-app .app-header-inner {
   padding-top: 0;
 }
 
-html.cubity-app .app-main {
-  padding-bottom: 6.25rem;
-}
-
 html.cubity-app .app-bottom-nav {
   padding-bottom: 0;
+}
+
+html.keyboard-open .app-bottom-nav {
+  display: none;
+}
+
+html.keyboard-open .app-main {
+  padding-bottom: 1.5rem;
+}
+
+input,
+textarea,
+select {
+  scroll-margin-top: 6rem;
+  scroll-margin-bottom: 8rem;
 }

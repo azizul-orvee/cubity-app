@@ -131,7 +131,9 @@ cd android && ./gradlew assembleRelease
 cp app/build/outputs/apk/release/app-release.apk ../dist/Cubity.apk
 ```
 
-The APK always loads `https://cubity-app.vercel.app/`. Website updates show up in the app without a new APK. A new APK is only needed for icon, splash, or package changes.
+The APK always loads `https://cubity-app.vercel.app/`. **Most changes do not need a new APK.** Screens, spacing, forms, PDFs, and data updates go live on Vercel; close and reopen Cubity (or pull to refresh) and the phone shows them.
+
+Install a new `dist/Cubity.apk` only when the Android shell itself changes: icon, splash, status bar, keyboard lifting, or the package. I will say so when that happens.
 
 On this Mac there is a Pixel 7 emulator named **Cubity_Phone**. Boot it, then install:
 
@@ -152,6 +154,7 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Opened up the clients list and client account pages with more space, quieter type, and larger tap targets. The add-client form now lifts above the Android keyboard so Address stays visible.
 - 2026-09-16 — Stopped sideways pan in the Android app, pinned a teal status bar so scroll no longer covers the clock, made dashboard rings shrink to the phone width, and used a solid app header.
 - 2026-09-16 — Set up a Pixel 7 emulator (`Cubity_Phone`) on this Mac so the APK can be installed and checked locally.
 - 2026-09-16 — Added an Android APK wrapper (`dist/Cubity.apk`) that opens the live site in a fullscreen WebView with Cubity splash, icon, and no browser chrome.

@@ -11,8 +11,8 @@ android {
         applicationId = "com.cubity.receivables"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
         buildConfigField("String", "APP_URL", "\"https://cubity-app.vercel.app/\"")
         buildConfigField("String", "APP_HOST", "\"cubity-app.vercel.app\"")
     }

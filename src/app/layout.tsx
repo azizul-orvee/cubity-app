@@ -33,6 +33,7 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: "#128C86",
+  interactiveWidget: "resizes-content",
 };
 
 export const dynamic = "force-dynamic";

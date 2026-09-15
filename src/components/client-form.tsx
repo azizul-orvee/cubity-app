@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type FocusEvent } from "react";
 import type { Client } from "@prisma/client";
 import { createClient, updateClient } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,13 @@ import { SubmitButton } from "@/components/submit-button";
 
 type State = { error?: string } | undefined;
 
-const fieldClass = "h-12 text-base md:h-12 md:text-base";
+const fieldClass = "h-14 text-base md:h-14 md:text-base";
+
+function revealField(event: FocusEvent<HTMLElement>) {
+  window.setTimeout(() => {
+    event.target.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, 120);
+}
 
 export function ClientForm({ client }: { client?: Client }) {
   const isNew = !client;
@@ -21,15 +27,15 @@ export function ClientForm({ client }: { client?: Client }) {
   }, undefined);
 
   return (
-    <form action={formAction} className="grid gap-5" autoComplete="on">
+    <form action={formAction} className="grid gap-7 pb-8" autoComplete="on">
       {state?.error ? (
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
 
-      <div className="grid gap-5">
-        <div className="grid gap-2">
+      <div className="grid gap-6">
+        <div className="grid gap-2.5">
           <Label htmlFor="name" className="text-base">
             Name
           </Label>
@@ -43,9 +49,10 @@ export function ClientForm({ client }: { client?: Client }) {
             defaultValue={client?.name}
             placeholder="e.g. Tarek Ahmed"
             className={fieldClass}
+            onFocus={revealField}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="grid gap-2.5">
           <Label htmlFor="phone" className="text-base">
             Phone
           </Label>
@@ -60,9 +67,10 @@ export function ClientForm({ client }: { client?: Client }) {
             defaultValue={client?.phone}
             placeholder="01XXXXXXXXX"
             className={fieldClass}
+            onFocus={revealField}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="grid gap-2.5">
           <Label htmlFor="email" className="text-base">
             Email <span className="font-normal text-muted-foreground">(optional)</span>
           </Label>
@@ -76,9 +84,10 @@ export function ClientForm({ client }: { client?: Client }) {
             defaultValue={client?.email ?? ""}
             placeholder="name@email.com"
             className={fieldClass}
+            onFocus={revealField}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="grid gap-2.5">
           <Label htmlFor="address" className="text-base">
             Address <span className="font-normal text-muted-foreground">(optional)</span>
           </Label>
@@ -90,12 +99,13 @@ export function ClientForm({ client }: { client?: Client }) {
             defaultValue={client?.address ?? ""}
             placeholder="House, road, area"
             className={fieldClass}
+            onFocus={revealField}
           />
         </div>
 
         {client ? (
           <>
-            <div className="grid gap-2">
+            <div className="grid gap-2.5">
               <Label htmlFor="organization">Company / organization</Label>
               <Input
                 id="organization"
@@ -103,9 +113,10 @@ export function ClientForm({ client }: { client?: Client }) {
                 defaultValue={client.organization ?? ""}
                 placeholder="Optional"
                 className={fieldClass}
+                onFocus={revealField}
               />
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-2.5">
               <Label htmlFor="siteName">Current site / project</Label>
               <Input
                 id="siteName"
@@ -113,32 +124,34 @@ export function ClientForm({ client }: { client?: Client }) {
                 defaultValue={client.siteName ?? ""}
                 placeholder="Optional"
                 className={fieldClass}
+                onFocus={revealField}
               />
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-2.5">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
                 name="notes"
                 defaultValue={client.notes ?? ""}
                 placeholder="Anything useful to remember"
-                className="min-h-24 text-base"
+                className="min-h-28 text-base"
+                onFocus={revealField}
               />
             </div>
           </>
         ) : null}
       </div>
 
-      <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+      <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
         <Button
           type="button"
           variant="outline"
-          className="h-12 w-full text-base sm:w-auto md:h-12"
+          className="h-14 w-full text-base sm:w-auto md:h-14"
           asChild
         >
           <a href={client ? `/clients/${client.id}` : "/clients"}>Cancel</a>
         </Button>
-        <SubmitButton className="h-12 w-full text-base sm:min-w-40 sm:w-auto md:h-12">
+        <SubmitButton className="h-14 w-full text-base sm:min-w-40 sm:w-auto md:h-14">
           {client ? "Save client" : "Create client"}
         </SubmitButton>
       </div>
