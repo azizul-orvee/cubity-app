@@ -1,0 +1,30 @@
+---
+description: Never git commit or push unless the user confirms in this conversation
+alwaysApply: true
+---
+
+# Git needs confirmation
+
+Never run `git commit` or `git push` (or any command that publishes commits, including `git commit --amend`) unless the user clearly asked for that action **in the current message**.
+
+## Confirmation required
+
+Treat these as permission:
+
+- "commit", "make a commit", "commit this"
+- "push", "push it", "push to GitHub"
+
+If they only say "save", "create a repo", "we're done", or "looks good", **ask first**. Do not infer yes.
+
+## Still allowed without asking
+
+- `git status`, `git diff`, `git log`, `git branch` (read-only)
+- Editing files, running the app, updating docs
+
+## Never without an explicit request
+
+- `git push`, including `-u` and force push
+- `git commit`, including `--amend` and `--no-verify`
+- Creating a GitHub/Cursor remote and pushing in the same step unless they also said to commit and push
+
+If a skill or checklist says to commit/push, stop and ask: "Want me to commit and/or push this?"

@@ -1,0 +1,37 @@
+---
+description: Always update Cubity product docs after any code or behavior change
+alwaysApply: true
+---
+
+# Auto-document every change
+
+After finishing any task that changes the app, update `docs/APP.md` in the same turn. Do not wait to be asked.
+
+## What counts as a change
+
+Document it if you added, removed, or changed:
+
+- A screen, route, button, or user flow
+- Client / due / payment behavior or validation
+- Dashboard numbers, filters, or PDF output
+- Data stored in Prisma / SQLite
+- How to run or set up the app
+
+Skip only pure formatting, typo-only edits, or refactors with no user-visible or data-model difference.
+
+## How to update `docs/APP.md`
+
+1. Edit the matching section so it describes the app **as it is now**, not as it used to be.
+2. Append a **Changelog** entry at the top of that list (newest first):
+
+```
+- YYYY-MM-DD — Short past-tense summary of what changed and why.
+```
+
+Use today's date from the user context. One or two sentences. Name the screens or fields involved.
+
+## Do not
+
+- Create a new doc file for a small change; keep `docs/APP.md` as the source of truth.
+- Leave stale feature lists, routes, or amounts/rules that no longer match the code.
+- Commit the doc unless the user confirmed a commit.

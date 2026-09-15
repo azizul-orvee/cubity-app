@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id               String        @id @default(cuid())
+  name             String
+  phone            String
+  address          String?
+  email            String?
+  organization     String?
+  siteName         String?
+  notes            String?
+  nextPromisedDate DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  entries          LedgerEntry[]
+}
+
+model LedgerEntry {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type         String
+  amount       Int
+  date         DateTime
+  method       String?
+  note         String?
+  promisedDate DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
+  @@index([date])
+}
