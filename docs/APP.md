@@ -113,9 +113,35 @@ Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: 
 2. In the Vercel project: **Storage → Neon** (or Marketplace → Neon). Create a database. That injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
 3. You do **not** need a separate `DIRECT_URL` on Vercel. Install/build map Neon’s unpooled URL into Prisma’s `DIRECT_URL` automatically.
 4. Build runs `prisma generate` then `prisma migrate deploy` then `next build`, which creates tables on Neon.
-5. Open the `*.vercel.app` URL.
+5. Open https://cubity-app.vercel.app
 
 Local: copy `.env.example` to `.env` / `.env.local` and paste your Neon URLs. `npm run dev` then uses the same cloud database.
+
+## Android APK
+
+There is a native-looking Android wrapper in `android/`. It is a fullscreen WebView of the live site with a **fixed teal status bar**, Cubity splash and icon, and no Chrome address bar. The page cannot pan sideways. Call / WhatsApp open the real phone apps. PDF statements go to Downloads.
+
+The built file is **`dist/Cubity.apk`** (install from Files / a share; allow unknown sources). Needs internet. It is not on Play Store.
+
+Rebuild after changing the wrapper:
+
+```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17
+cd android && ./gradlew assembleRelease
+cp app/build/outputs/apk/release/app-release.apk ../dist/Cubity.apk
+```
+
+The APK always loads `https://cubity-app.vercel.app/`. Website updates show up in the app without a new APK. A new APK is only needed for icon, splash, or package changes.
+
+On this Mac there is a Pixel 7 emulator named **Cubity_Phone**. Boot it, then install:
+
+```bash
+export ANDROID_SDK_ROOT=/opt/homebrew/share/android-commandlinetools
+export PATH="$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+emulator -avd Cubity_Phone -gpu auto
+adb install -r dist/Cubity.apk
+adb shell am start -n com.cubity.receivables/.MainActivity
+```
 
 ## Agent rules
 
@@ -126,6 +152,9 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Stopped sideways pan in the Android app, pinned a teal status bar so scroll no longer covers the clock, made dashboard rings shrink to the phone width, and used a solid app header.
+- 2026-09-16 — Set up a Pixel 7 emulator (`Cubity_Phone`) on this Mac so the APK can be installed and checked locally.
+- 2026-09-16 — Added an Android APK wrapper (`dist/Cubity.apk`) that opens the live site in a fullscreen WebView with Cubity splash, icon, and no browser chrome.
 - 2026-09-16 — Named each client due-statement download after the client (`Azizul-Hakim.pdf`) instead of a generic statement filename.
 - 2026-09-16 — Tightened PDF table padding so Pending is not clipped, darkened footer type, and bumped body type one size for phone reading.
 - 2026-09-16 — Simplified Log payment for phones: dropped the note field, stacked large inputs, and only ask for the next promised date when money is still due.

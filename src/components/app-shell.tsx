@@ -20,9 +20,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-dvh bg-[radial-gradient(120%_80%_at_0%_-10%,rgba(46,196,182,0.22),transparent_42%),radial-gradient(90%_60%_at_100%_0%,rgba(56,189,248,0.14),transparent_40%),linear-gradient(180deg,#f4fbfb_0%,#eef6f6_100%)]">
-      <header className="sticky top-0 z-40 border-b border-white/60 bg-white/75 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 pt-[env(safe-area-inset-top)]">
+    <div className="app-shell min-h-dvh overflow-x-clip bg-[radial-gradient(120%_80%_at_0%_-10%,rgba(46,196,182,0.22),transparent_42%),radial-gradient(90%_60%_at_100%_0%,rgba(56,189,248,0.14),transparent_40%),linear-gradient(180deg,#f4fbfb_0%,#eef6f6_100%)]">
+      <header className="app-header sticky top-0 z-40 border-b border-border bg-white">
+        <div className="app-header-inner mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 pt-[env(safe-area-inset-top)]">
           <Link href="/" className="flex min-h-11 items-center gap-2">
             <Image
               src="/cubity-logo.jpg"
@@ -60,11 +60,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:py-8 md:pb-8">
+      <main className="app-main mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:py-8 md:pb-8">
         {children}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+      <nav className="app-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-4 px-2 pt-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;

@@ -84,8 +84,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-3 gap-2">
-        <div className="rounded-2xl bg-white p-2 ring-1 ring-border">
+      <section className="grid min-w-0 grid-cols-3 gap-2">
+        <div className="min-w-0 overflow-hidden rounded-2xl bg-white p-2 ring-1 ring-border">
           <RingMeter
             percent={overdueShare}
             color="#EF4444"
@@ -95,7 +95,7 @@ export default async function HomePage() {
             hint={`${snapshot.overdueCount} client${snapshot.overdueCount === 1 ? "" : "s"}`}
           />
         </div>
-        <div className="rounded-2xl bg-white p-2 ring-1 ring-border">
+        <div className="min-w-0 overflow-hidden rounded-2xl bg-white p-2 ring-1 ring-border">
           <RingMeter
             percent={upcomingShare}
             color="#F59E0B"
@@ -105,7 +105,7 @@ export default async function HomePage() {
             hint="Next 14 days"
           />
         </div>
-        <div className="rounded-2xl bg-white p-2 ring-1 ring-border">
+        <div className="min-w-0 overflow-hidden rounded-2xl bg-white p-2 ring-1 ring-border">
           <RingMeter
             percent={collectionRate}
             color="#22C55E"
@@ -133,7 +133,7 @@ export default async function HomePage() {
       </section>
 
       <section className="rounded-3xl bg-white p-4 ring-1 ring-border">
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1 flex min-w-0 flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold">Billed vs collected</h2>
             <p className="text-sm text-muted-foreground">Last 6 months of cash movement.</p>

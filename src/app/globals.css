@@ -121,13 +121,36 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
   }
   button, a, input, select, textarea {
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+html.cubity-app,
+html.cubity-app body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
+html.cubity-app .app-header-inner {
+  padding-top: 0;
+}
+
+html.cubity-app .app-main {
+  padding-bottom: 6.25rem;
+}
+
+html.cubity-app .app-bottom-nav {
+  padding-bottom: 0;
 }

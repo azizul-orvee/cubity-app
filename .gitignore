@@ -46,3 +46,13 @@ next-env.d.ts
 /prisma/dev.db-journal
 /prisma/*.db
 /prisma/*.db-journal
+
+# Android wrapper
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/app/*.jks
+/android/app/*.keystore
+/dist/

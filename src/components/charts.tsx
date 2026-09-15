@@ -40,7 +40,7 @@ export function DonutChart({
   let cursor = 0;
 
   return (
-    <div className="relative mx-auto" style={{ width: size, height: size }}>
+    <div className="relative mx-auto aspect-square w-full max-w-[196px]">
       <svg viewBox={`0 0 ${size} ${size}`} className="size-full">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E7F4F3" strokeWidth={thickness} />
         {total > 0
@@ -97,8 +97,8 @@ export function RingMeter({
   const clamped = Math.min(Math.max(percent, 0), 1);
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative" style={{ width: size, height: size }}>
+    <div className="flex w-full min-w-0 flex-col items-center gap-2">
+      <div className="relative aspect-square w-full max-w-[108px]">
         <svg viewBox={`0 0 ${size} ${size}`} className="size-full -rotate-90">
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={thickness} />
           <circle
