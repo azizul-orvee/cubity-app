@@ -1,16 +1,44 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { format } from "date-fns";
+import {
+  PDFDocument,
+  StandardFonts,
+  appendBezierCurve,
+  clip,
+  closePath,
+  endPath,
+  moveTo,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  type RGB,
+} from "pdf-lib";
 import { COMPANY, companyAddressLine, companyPhoneLine, paymentMethodLabel } from "@/lib/company";
 import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, type ClientWithEntries } from "@/lib/ledger";
 import { formatMoneyPdf } from "@/lib/money";
 
-const TEAL = rgb(0.18, 0.67, 0.66);
-const INK = rgb(0.08, 0.1, 0.12);
-const MUTED = rgb(0.35, 0.4, 0.42);
-const LINE = rgb(0.82, 0.88, 0.88);
-const ROW = rgb(0.95, 0.98, 0.98);
+const TEAL = rgb(0.14, 0.52, 0.52);
+const TEAL_DEEP = rgb(0.08, 0.3, 0.31);
+const INK = rgb(0.07, 0.09, 0.11);
+const MUTED = rgb(0.38, 0.42, 0.44);
+const HAIR = rgb(0.78, 0.84, 0.84);
+const WASH = rgb(0.96, 0.98, 0.98);
+const RED = rgb(0.68, 0.1, 0.14);
+const WHITE = rgb(1, 1, 1);
+
+const PAGE = { width: 595.28, height: 841.89 };
+const MARGIN = 48;
+
+const ICON_PIN =
+  "M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z M12 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6z";
+const ICON_PHONE =
+  "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z";
+const ICON_MAIL = "M3 5 L21 5 L21 19 L3 19 Z M3 5 L12 12.5 L21 5";
 
 async function loadLogo(pdf: PDFDocument) {
   try {
@@ -33,6 +61,36 @@ function drawText(
   page.drawText(text, { x, y, size, font, color });
 }
 
+function drawRight(
+  page: PDFPage,
+  text: string,
+  right: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  color = INK,
+) {
+  const width = font.widthOfTextAtSize(text, size);
+  page.drawText(text, { x: right - width, y, size, font, color });
+}
+
+function drawTracked(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  tracking: number,
+  color = INK,
+) {
+  let cursor = x;
+  for (const character of text) {
+    page.drawText(character, { x: cursor, y, size, font, color });
+    cursor += font.widthOfTextAtSize(character, size) + tracking;
+  }
+}
+
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   const words = text.split(/\s+/);
   const lines: string[] = [];
@@ -50,41 +108,148 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines;
 }
 
+function drawStrokeIcon(page: PDFPage, path: string, x: number, y: number, size: number, color: RGB) {
+  page.drawSvgPath(path, {
+    x,
+    y: y + size - 1.5,
+    scale: size / 24,
+    borderColor: color,
+    borderWidth: 1.75,
+  });
+}
+
+function drawCircularLogo(page: PDFPage, logo: PDFImage, x: number, y: number, size: number) {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const r = size / 2 - 1.25;
+  const k = 0.552284749831;
+  page.pushOperators(
+    pushGraphicsState(),
+    moveTo(cx + r, cy),
+    appendBezierCurve(cx + r, cy + k * r, cx + k * r, cy + r, cx, cy + r),
+    appendBezierCurve(cx - k * r, cy + r, cx - r, cy + k * r, cx - r, cy),
+    appendBezierCurve(cx - r, cy - k * r, cx - k * r, cy - r, cx, cy - r),
+    appendBezierCurve(cx + k * r, cy - r, cx + r, cy - k * r, cx + r, cy),
+    closePath(),
+    clip(),
+    endPath(),
+  );
+  page.drawImage(logo, { x, y, width: size, height: size });
+  page.pushOperators(popGraphicsState());
+}
+
+function drawLetterhead(
+  page: PDFPage,
+  logo: Awaited<ReturnType<typeof loadLogo>>,
+  fonts: { regular: PDFFont; bold: PDFFont },
+  documentTitle: string,
+  meta: string,
+) {
+  const { width, height } = page.getSize();
+  page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+
+  const top = height - 36;
+  const logoWidth = 68;
+  const logoHeight = logo ? logoWidth : 0;
+
+  const nameLines = ["CUBITY ENGINEERING &", "CONSTRUCTION COMPANY"];
+  const nameSize = 13;
+  const nameLeading = 16;
+  const titleSize = 9;
+  const textHeight = nameLines.length * nameLeading + 18 + titleSize;
+  const blockHeight = Math.max(logoHeight, textHeight);
+  const blockBottom = top - blockHeight;
+  const textRight = width - MARGIN;
+
+  if (logo) {
+    drawCircularLogo(
+      page,
+      logo,
+      MARGIN,
+      blockBottom + (blockHeight - logoHeight) / 2,
+      logoWidth,
+    );
+  }
+
+  let textY = blockBottom + blockHeight - 12;
+  if (textHeight < blockHeight) {
+    textY -= (blockHeight - textHeight) / 2;
+  }
+  for (const line of nameLines) {
+    drawRight(page, line, textRight, textY, fonts.bold, nameSize, TEAL);
+    textY -= nameLeading;
+  }
+  textY -= 4;
+  let titleWidth = 0;
+  for (const character of documentTitle) {
+    titleWidth += fonts.bold.widthOfTextAtSize(character, titleSize) + 1.15;
+  }
+  if (documentTitle.length) titleWidth -= 1.15;
+  drawTracked(page, documentTitle, textRight - titleWidth, textY, fonts.bold, titleSize, 1.15, INK);
+  textY -= 13;
+  drawRight(page, meta, textRight, textY, fonts.regular, 8, MUTED);
+
+  const ruleY = blockBottom - 14;
+  page.drawLine({
+    start: { x: MARGIN, y: ruleY + 1.6 },
+    end: { x: width - MARGIN, y: ruleY + 1.6 },
+    thickness: 1.25,
+    color: TEAL,
+  });
+  page.drawLine({
+    start: { x: MARGIN, y: ruleY },
+    end: { x: width - MARGIN, y: ruleY },
+    thickness: 0.4,
+    color: HAIR,
+  });
+
+  return ruleY - 22;
+}
+
+function drawContactFooter(page: PDFPage, font: PDFFont) {
+  const { width } = page.getSize();
+  page.drawLine({
+    start: { x: MARGIN, y: 62 },
+    end: { x: width - MARGIN, y: 62 },
+    thickness: 0.5,
+    color: HAIR,
+  });
+
+  const iconSize = 11;
+  const gap = 7;
+  const size = 8;
+  const rows = [
+    { path: ICON_PIN, text: companyAddressLine() },
+    { path: ICON_PHONE, text: companyPhoneLine() },
+    { path: ICON_MAIL, text: COMPANY.email },
+  ];
+  const blockWidth = Math.max(
+    ...rows.map((row) => iconSize + gap + font.widthOfTextAtSize(row.text, size)),
+  );
+  const left = (width - blockWidth) / 2;
+  let y = 46;
+
+  for (const row of rows) {
+    drawStrokeIcon(page, row.path, left, y, iconSize, TEAL);
+    drawText(page, row.text, left + iconSize + gap, y, font, size, MUTED);
+    y -= 15;
+  }
+}
+
 export async function buildClientStatementPdf(client: ClientWithEntries) {
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await loadLogo(pdf);
   const status = clientStatus(client);
   const lines = runningLedger(client.entries);
 
-  let page = pdf.addPage([595.28, 841.89]);
+  let page = pdf.addPage([PAGE.width, PAGE.height]);
   let { width, height } = page.getSize();
-  let y = height - 36;
+  let y = drawLetterhead(page, logo, { regular, bold }, "DUE STATEMENT", `Issued ${format(new Date(), "dd MMMM yyyy")}`);
 
-  if (logo) {
-    const logoWidth = 72;
-    const logoHeight = (logo.height / logo.width) * logoWidth;
-    page.drawImage(logo, {
-      x: 40,
-      y: y - logoHeight + 8,
-      width: logoWidth,
-      height: logoHeight,
-    });
-  }
-
-  drawText(page, COMPANY.legalName.toUpperCase(), 128, y - 8, bold, 11, TEAL);
-  drawText(page, "DUE STATEMENT", 128, y - 24, bold, 18, INK);
-  drawText(page, companyAddressLine(), 128, y - 40, font, 8, MUTED);
-  drawText(page, `${companyPhoneLine()}  ·  ${COMPANY.email}`, 128, y - 52, font, 8, MUTED);
-  drawText(page, `Issued ${formatDate(new Date())}`, 128, y - 66, font, 8, MUTED);
-
-  y -= 96;
-  page.drawLine({ start: { x: 40, y }, end: { x: width - 40, y }, thickness: 1.5, color: TEAL });
-  y -= 22;
-
-  drawText(page, "Billed to", 40, y, font, 8, MUTED);
-  drawText(page, client.name, 40, y - 14, bold, 13);
+  drawText(page, "BILLED TO", MARGIN, y, regular, 7, MUTED);
+  drawText(page, client.name, MARGIN, y - 15, bold, 13, INK);
   const details = [
     client.organization,
     client.phone,
@@ -93,149 +258,189 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
     client.siteName ? `Site / project: ${client.siteName}` : null,
   ].filter(Boolean) as string[];
 
-  let detailY = y - 30;
+  let detailY = y - 31;
   for (const detail of details) {
-    drawText(page, detail, 40, detailY, font, 9, MUTED);
+    drawText(page, detail, MARGIN, detailY, regular, 9, MUTED);
     detailY -= 12;
   }
 
-  const boxX = 340;
+  const boxWidth = 232;
+  const box = {
+    x: width - MARGIN - boxWidth,
+    width: boxWidth,
+    height: 88,
+    bottom: y - 74,
+  };
   page.drawRectangle({
-    x: boxX,
-    y: y - 72,
-    width: 215,
-    height: 86,
-    color: ROW,
-    borderColor: TEAL,
-    borderWidth: 1,
+    x: box.x,
+    y: box.bottom,
+    width: box.width,
+    height: box.height,
+    color: WASH,
   });
-  drawText(page, "OUTSTANDING", boxX + 14, y - 8, font, 8, MUTED);
-  drawText(page, formatMoneyPdf(status.outstanding), boxX + 14, y - 28, bold, 16, TEAL);
-  drawText(page, `Total billed  ${formatMoneyPdf(status.totalDue)}`, boxX + 14, y - 46, font, 9, INK);
-  drawText(page, `Total paid    ${formatMoneyPdf(status.totalPaid)}`, boxX + 14, y - 60, font, 9, INK);
+  page.drawRectangle({
+    x: box.x,
+    y: box.bottom,
+    width: 3,
+    height: box.height,
+    color: TEAL,
+  });
+
+  const innerLeft = box.x + 16;
+  const innerRight = box.x + box.width - 14;
+  let boxY = box.bottom + box.height - 16;
+  drawTracked(page, "OUTSTANDING", innerLeft, boxY, bold, 7, 0.9, MUTED);
+  boxY -= 17;
+  drawText(page, formatMoneyPdf(status.outstanding), innerLeft, boxY, bold, 18, RED);
+  boxY -= 12;
+  page.drawLine({
+    start: { x: innerLeft, y: boxY },
+    end: { x: innerRight, y: boxY },
+    thickness: 0.4,
+    color: HAIR,
+  });
+  boxY -= 13;
+  drawText(page, "Billed", innerLeft, boxY, regular, 8, MUTED);
+  drawRight(page, formatMoneyPdf(status.totalDue), innerRight, boxY, regular, 8, INK);
+  boxY -= 13;
+  drawText(page, "Paid", innerLeft, boxY, regular, 8, MUTED);
+  drawRight(page, formatMoneyPdf(status.totalPaid), innerRight, boxY, regular, 8, INK);
   if (status.promised && status.outstanding > 0) {
+    boxY -= 13;
     drawText(
       page,
-      `${status.overdue ? "Overdue since" : "Promised by"} ${formatDate(status.promised)}`,
-      boxX + 14,
-      y - 74,
-      font,
+      status.overdue ? "Overdue since" : "Promised by",
+      innerLeft,
+      boxY,
+      regular,
       8,
-      status.overdue ? rgb(0.7, 0.2, 0.2) : MUTED,
+      status.overdue ? RED : MUTED,
+    );
+    drawRight(
+      page,
+      formatDate(status.promised),
+      innerRight,
+      boxY,
+      regular,
+      8,
+      status.overdue ? RED : INK,
     );
   }
 
-  y = Math.min(detailY, y - 92) - 12;
+  y = Math.min(detailY, box.bottom) - 28;
 
   const cols = {
-    date: 40,
-    details: 110,
-    due: 330,
-    paid: 410,
-    balance: 490,
+    date: MARGIN,
+    details: 118,
+    due: 392,
+    paid: 468,
+    pending: width - MARGIN,
   };
 
   function headerRow(currentPage: PDFPage, headerY: number) {
     currentPage.drawRectangle({
-      x: 40,
-      y: headerY - 6,
-      width: width - 80,
-      height: 20,
-      color: TEAL,
+      x: MARGIN,
+      y: headerY - 7,
+      width: width - MARGIN * 2,
+      height: 22,
+      color: TEAL_DEEP,
     });
-    const headerColor = rgb(1, 1, 1);
-    currentPage.drawText("Date", { x: cols.date + 6, y: headerY, size: 8, font: bold, color: headerColor });
-    currentPage.drawText("Details", { x: cols.details, y: headerY, size: 8, font: bold, color: headerColor });
-    currentPage.drawText("Due", { x: cols.due, y: headerY, size: 8, font: bold, color: headerColor });
-    currentPage.drawText("Paid", { x: cols.paid, y: headerY, size: 8, font: bold, color: headerColor });
-    currentPage.drawText("Balance", { x: cols.balance, y: headerY, size: 8, font: bold, color: headerColor });
+    currentPage.drawText("Date", {
+      x: cols.date + 8,
+      y: headerY,
+      size: 7.5,
+      font: bold,
+      color: WHITE,
+    });
+    currentPage.drawText("Particulars", {
+      x: cols.details,
+      y: headerY,
+      size: 7.5,
+      font: bold,
+      color: WHITE,
+    });
+    drawRight(currentPage, "Due", cols.due, headerY, bold, 7.5, WHITE);
+    drawRight(currentPage, "Paid", cols.paid, headerY, bold, 7.5, WHITE);
+    drawRight(currentPage, "Pending", cols.pending, headerY, bold, 7.5, WHITE);
   }
 
   headerRow(page, y);
-  y -= 22;
+  y -= 24;
 
   if (lines.length === 0) {
-    drawText(page, "No dues or payments recorded yet.", 40, y, font, 10, MUTED);
+    drawText(page, "No dues or payments recorded yet.", MARGIN, y, regular, 10, MUTED);
   }
 
   for (const [index, line] of lines.entries()) {
-    if (y < 80) {
-      page = pdf.addPage([595.28, 841.89]);
+    const detailParts = [
+      line.entry.type === "DUE" ? "Due billed" : "Payment received",
+      paymentMethodLabel(line.entry.method),
+      line.entry.note,
+      line.entry.promisedDate ? `Balance promised ${formatDate(line.entry.promisedDate)}` : null,
+    ].filter(Boolean);
+    const wrapped = wrapText(detailParts.join("  ·  "), regular, 8, 248);
+    const rowHeight = 16 + Math.max(0, wrapped.length - 1) * 11;
+
+    if (y - rowHeight < 118) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
       ({ width, height } = page.getSize());
       y = height - 48;
       headerRow(page, y);
-      y -= 22;
+      y -= 24;
     }
 
     if (index % 2 === 0) {
       page.drawRectangle({
-        x: 40,
-        y: y - 8,
-        width: width - 80,
-        height: 20,
-        color: ROW,
+        x: MARGIN,
+        y: y - rowHeight + 8,
+        width: width - MARGIN * 2,
+        height: rowHeight,
+        color: WASH,
       });
     }
 
-    const detailParts = [
-      line.entry.type === "DUE" ? "Due added" : "Payment received",
-      paymentMethodLabel(line.entry.method),
-      line.entry.note,
-      line.entry.promisedDate ? `Promised remaining: ${formatDate(line.entry.promisedDate)}` : null,
-    ].filter(Boolean);
-    const detail = detailParts.join(" · ");
-    const wrapped = wrapText(detail, font, 8, 200);
+    drawText(page, formatDate(line.entry.date), cols.date + 8, y, regular, 8, INK);
+    drawText(page, wrapped[0] ?? "", cols.details, y, regular, 8, MUTED);
+    drawRight(page, line.due ? formatMoneyPdf(line.due) : "—", cols.due, y, regular, 8, INK);
+    drawRight(page, line.paid ? formatMoneyPdf(line.paid) : "—", cols.paid, y, regular, 8, INK);
+    drawRight(page, formatMoneyPdf(line.balance), cols.pending, y, bold, 8, INK);
 
-    drawText(page, formatDate(line.entry.date), cols.date + 6, y, font, 8);
-    drawText(page, wrapped[0] ?? "", cols.details, y, font, 8, MUTED);
-    drawText(page, line.due ? formatMoneyPdf(line.due) : "—", cols.due, y, font, 8);
-    drawText(page, line.paid ? formatMoneyPdf(line.paid) : "—", cols.paid, y, font, 8);
-    drawText(page, formatMoneyPdf(line.balance), cols.balance, y, bold, 8);
-
-    y -= 16;
+    let extraY = y - 12;
     for (const extra of wrapped.slice(1)) {
-      drawText(page, extra, cols.details, y, font, 8, MUTED);
-      y -= 12;
+      drawText(page, extra, cols.details, extraY, regular, 8, MUTED);
+      extraY -= 11;
     }
-    y -= 4;
+    y -= rowHeight;
   }
 
-  y -= 10;
-  page.drawLine({ start: { x: 40, y }, end: { x: width - 40, y }, thickness: 1, color: LINE });
+  y -= 8;
+  page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: width - MARGIN, y },
+    thickness: 0.6,
+    color: HAIR,
+  });
   y -= 18;
-  drawText(page, "Amount still pending", 330, y, font, 9, MUTED);
-  drawText(page, formatMoneyPdf(status.outstanding), 450, y, bold, 12, TEAL);
+  drawRight(page, "Amount still pending", cols.paid, y, regular, 9, MUTED);
+  drawRight(page, formatMoneyPdf(status.outstanding), cols.pending, y, bold, 12, RED);
 
-  y -= 36;
+  y -= 32;
   if (client.notes) {
-    drawText(page, "Client notes", 40, y, bold, 9, INK);
-    y -= 14;
-    for (const noteLine of wrapText(client.notes, font, 9, width - 80)) {
-      drawText(page, noteLine, 40, y, font, 9, MUTED);
+    drawTracked(page, "NOTES", MARGIN, y, bold, 7, 0.8, MUTED);
+    y -= 13;
+    for (const noteLine of wrapText(client.notes, regular, 9, width - MARGIN * 2)) {
+      drawText(page, noteLine, MARGIN, y, regular, 9, MUTED);
       y -= 12;
     }
-    y -= 10;
   }
 
-  drawText(
-    page,
-    "This statement lists dues billed and payments received by Cubity. Please settle the outstanding balance by the promised date.",
-    40,
-    62,
-    font,
-    8,
-    MUTED,
-  );
-  drawText(page, COMPANY.legalName, 40, 46, bold, 8, TEAL);
-  drawText(page, companyAddressLine(), 40, 34, font, 8, MUTED);
-  drawText(page, `${companyPhoneLine()}  ·  ${COMPANY.email}`, 40, 22, font, 8, MUTED);
-
+  drawContactFooter(page, regular);
   return pdf.save();
 }
 
 export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await loadLogo(pdf);
   const withDues = clients
@@ -245,72 +450,68 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
 
   const total = withDues.reduce((sum, item) => sum + item.status.outstanding, 0);
 
-  let page = pdf.addPage([595.28, 841.89]);
+  let page = pdf.addPage([PAGE.width, PAGE.height]);
   let { width, height } = page.getSize();
-  let y = height - 40;
-
-  if (logo) {
-    const logoWidth = 64;
-    const logoHeight = (logo.height / logo.width) * logoWidth;
-    page.drawImage(logo, { x: 40, y: y - logoHeight + 6, width: logoWidth, height: logoHeight });
-  }
-
-  drawText(page, COMPANY.legalName.toUpperCase(), 118, y - 6, bold, 11, TEAL);
-  drawText(page, "OUTSTANDING RECEIVABLES", 118, y - 24, bold, 16, INK);
-  drawText(page, companyAddressLine(), 118, y - 40, font, 8, MUTED);
-  drawText(
+  let y = drawLetterhead(
     page,
-    `${formatDate(new Date())}  ·  ${withDues.length} client${withDues.length === 1 ? "" : "s"}  ·  ${formatMoneyPdf(total)} due`,
-    118,
-    y - 54,
-    font,
-    9,
-    MUTED,
+    logo,
+    { regular, bold },
+    "OUTSTANDING RECEIVABLES",
+    `${format(new Date(), "dd MMMM yyyy")}  ·  ${withDues.length} client${withDues.length === 1 ? "" : "s"}`,
   );
 
-  y -= 86;
-  page.drawRectangle({ x: 40, y: y - 6, width: width - 80, height: 20, color: TEAL });
-  const white = rgb(1, 1, 1);
-  page.drawText("Client", { x: 48, y, size: 8, font: bold, color: white });
-  page.drawText("Phone", { x: 220, y, size: 8, font: bold, color: white });
-  page.drawText("Promised", { x: 340, y, size: 8, font: bold, color: white });
-  page.drawText("Outstanding", { x: 450, y, size: 8, font: bold, color: white });
-  y -= 22;
+  page.drawRectangle({
+    x: MARGIN,
+    y: y - 7,
+    width: width - MARGIN * 2,
+    height: 22,
+    color: TEAL_DEEP,
+  });
+  page.drawText("Client", { x: MARGIN + 8, y, size: 7.5, font: bold, color: WHITE });
+  page.drawText("Phone", { x: 220, y, size: 7.5, font: bold, color: WHITE });
+  page.drawText("Promised", { x: 340, y, size: 7.5, font: bold, color: WHITE });
+  drawRight(page, "Outstanding", width - MARGIN, y, bold, 7.5, WHITE);
+  y -= 24;
 
   if (withDues.length === 0) {
-    drawText(page, "No outstanding receivables.", 48, y, font, 10, MUTED);
+    drawText(page, "No outstanding receivables.", MARGIN + 8, y, regular, 10, MUTED);
   }
 
   for (const [index, item] of withDues.entries()) {
-    if (y < 60) {
-      page = pdf.addPage([595.28, 841.89]);
+    if (y < 90) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
       ({ width, height } = page.getSize());
       y = height - 48;
     }
     if (index % 2 === 0) {
-      page.drawRectangle({ x: 40, y: y - 8, width: width - 80, height: 20, color: ROW });
+      page.drawRectangle({ x: MARGIN, y: y - 8, width: width - MARGIN * 2, height: 20, color: WASH });
     }
-    drawText(page, item.client.name.slice(0, 28), 48, y, bold, 9);
-    drawText(page, item.client.phone, 220, y, font, 8, MUTED);
+    drawText(page, item.client.name.slice(0, 28), MARGIN + 8, y, bold, 9);
+    drawText(page, item.client.phone, 220, y, regular, 8, MUTED);
     drawText(
       page,
       item.status.promised ? formatDate(item.status.promised) : "Not set",
       340,
       y,
-      font,
+      regular,
       8,
-      item.status.overdue ? rgb(0.7, 0.2, 0.2) : MUTED,
+      item.status.overdue ? RED : MUTED,
     );
-    drawText(page, formatMoneyPdf(item.status.outstanding), 450, y, bold, 9, TEAL);
+    drawRight(page, formatMoneyPdf(item.status.outstanding), width - MARGIN, y, bold, 9, RED);
     y -= 20;
   }
 
-  y -= 16;
-  page.drawLine({ start: { x: 40, y }, end: { x: width - 40, y }, thickness: 1, color: LINE });
+  y -= 12;
+  page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: width - MARGIN, y },
+    thickness: 0.6,
+    color: HAIR,
+  });
   y -= 18;
-  drawText(page, "Total the company will receive", 300, y, font, 9, MUTED);
-  drawText(page, formatMoneyPdf(total), 450, y, bold, 12, TEAL);
-  drawText(page, `${companyPhoneLine()}  ·  ${COMPANY.email}`, 40, 28, font, 8, MUTED);
+  drawRight(page, "Total receivable", width - MARGIN - 90, y, regular, 9, MUTED);
+  drawRight(page, formatMoneyPdf(total), width - MARGIN, y, bold, 12, RED);
 
+  drawContactFooter(page, regular);
   return pdf.save();
 }

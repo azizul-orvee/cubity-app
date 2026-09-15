@@ -80,7 +80,7 @@ Bottom navigation on phones: Home, Clients, company PDF, Add client (center plus
 
 ### PDFs
 
-- Per-client **due statement**: Cubity logo, Sylhet office contact, billed / paid / outstanding, full ledger with dates and notes, remaining promised date
+- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised, a gap before the ledger, **Pending** column, and outstanding amounts in red. Footer uses location, phone, and email icons.
 - Company **outstanding receivables** list with office address and phones
 
 ### Extra (beyond the original request)
@@ -124,6 +124,9 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Clipped the PDF letterhead logo to a circle so the square frame around the JPEG no longer shows.
+- 2026-09-16 — Moved the due-statement header company name, title, and issue date to the right, leaving the logo on the left.
+- 2026-09-16 — Restyled the client due-statement PDF: logo-only header on the left, company name plus a smaller title on the right, no header address, taller outstanding box so the promised date no longer clips, Balance renamed to Pending, and outstanding amounts in red. Footer address is centered and larger.
 - 2026-09-16 — Pointed Prisma at Neon’s `DATABASE_URL_UNPOOLED` (instead of a custom `DIRECT_URL`) so Vercel builds succeed with the env vars Neon already injects.
 - 2026-09-16 — Switched Prisma from SQLite to Neon Postgres (`DATABASE_URL` + `DIRECT_URL`) so Vercel builds can run `prisma migrate deploy`.
 - 2026-09-16 — Documented how to deploy on Vercel with Neon Postgres (SQLite cannot run on Vercel).
