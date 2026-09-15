@@ -10,7 +10,7 @@ Currency is shown as **Tk** (Bangladeshi Taka). Data lives in **Neon Postgres**.
 
 ## Run locally
 
-Copy `.env.example` to `.env` and paste Neon `DATABASE_URL` (pooled) plus `DIRECT_URL` (direct). Then:
+Copy `.env.example` to `.env` and paste Neon `DATABASE_URL` (pooled) plus `DATABASE_URL_UNPOOLED` (direct). Then:
 
 ```bash
 npm install
@@ -103,16 +103,14 @@ Prisma + **Neon Postgres** in production (SQLite only worked on this machine):
 - `Client` — profile fields + `nextPromisedDate`
 - `LedgerEntry` — `DUE` or `PAYMENT`, amount in poisha (Tk × 100), date, method, note, promised date snapshot
 
-Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: `.env.example` (`DATABASE_URL` pooled, `DIRECT_URL` direct).
+Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: `.env.example` (`DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` direct).
 
 ## Deploy on Vercel + Neon
 
 1. Repo is on GitHub: `azizul-orvee/cubity-app`. Vercel should deploy on push.
-2. In the Vercel project: **Storage → Neon** (or Marketplace → Neon). Create a database.
-3. Set env vars on Vercel (Production + Preview):
-   - `DATABASE_URL` — Neon **pooled** URL (`-pooler` in the host, `sslmode=require`)
-   - `DIRECT_URL` — Neon **direct** URL (no pooler). If Neon only shows `DATABASE_URL_UNPOOLED`, paste that as `DIRECT_URL`.
-4. Redeploy after env vars exist. Build runs `prisma generate && prisma migrate deploy && next build`, which creates tables on Neon.
+2. In the Vercel project: **Storage → Neon** (or Marketplace → Neon). Create a database. That injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+3. You do **not** need a separate `DIRECT_URL` on Vercel. Install/build map Neon’s unpooled URL into Prisma’s `DIRECT_URL` automatically.
+4. Build runs `prisma generate` then `prisma migrate deploy` then `next build`, which creates tables on Neon.
 5. Open the `*.vercel.app` URL.
 
 Local: copy `.env.example` to `.env` / `.env.local` and paste your Neon URLs. `npm run dev` then uses the same cloud database.
@@ -126,6 +124,7 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Pointed Prisma at Neon’s `DATABASE_URL_UNPOOLED` (instead of a custom `DIRECT_URL`) so Vercel builds succeed with the env vars Neon already injects.
 - 2026-09-16 — Switched Prisma from SQLite to Neon Postgres (`DATABASE_URL` + `DIRECT_URL`) so Vercel builds can run `prisma migrate deploy`.
 - 2026-09-16 — Documented how to deploy on Vercel with Neon Postgres (SQLite cannot run on Vercel).
 - 2026-09-16 — Rebuilt the home summary with colorful rings, donut, 6-month line chart, aging capsule, and largest-balance bars; made the app mobile-first (bottom nav, larger tap targets, hero money cards). Put real Cubity Sylhet office, phones, and email on the dashboard and PDFs, and removed the demo client.
