@@ -14,7 +14,7 @@ Document it if you added, removed, or changed:
 - A screen, route, button, or user flow
 - Client / due / payment behavior or validation
 - Dashboard numbers, filters, or PDF output
-- Data stored in Prisma / SQLite
+- Data stored in Prisma / Postgres
 - How to run or set up the app
 
 Skip only pure formatting, typo-only edits, or refactors with no user-visible or data-model difference.

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { COMPANY, paymentMethodLabel } from "@/lib/company";
+import { COMPANY, companyAddressLine, companyPhoneLine, paymentMethodLabel } from "@/lib/company";
 import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, type ClientWithEntries } from "@/lib/ledger";
 import { formatMoneyPdf } from "@/lib/money";
@@ -75,9 +75,11 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
 
   drawText(page, COMPANY.legalName.toUpperCase(), 128, y - 8, bold, 11, TEAL);
   drawText(page, "DUE STATEMENT", 128, y - 24, bold, 18, INK);
-  drawText(page, `Issued ${formatDate(new Date())}`, 128, y - 40, font, 9, MUTED);
+  drawText(page, companyAddressLine(), 128, y - 40, font, 8, MUTED);
+  drawText(page, `${companyPhoneLine()}  ·  ${COMPANY.email}`, 128, y - 52, font, 8, MUTED);
+  drawText(page, `Issued ${formatDate(new Date())}`, 128, y - 66, font, 8, MUTED);
 
-  y -= 78;
+  y -= 96;
   page.drawLine({ start: { x: 40, y }, end: { x: width - 40, y }, thickness: 1.5, color: TEAL });
   y -= 22;
 
@@ -219,12 +221,14 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
     page,
     "This statement lists dues billed and payments received by Cubity. Please settle the outstanding balance by the promised date.",
     40,
-    48,
+    62,
     font,
     8,
     MUTED,
   );
-  drawText(page, COMPANY.legalName, 40, 34, bold, 8, TEAL);
+  drawText(page, COMPANY.legalName, 40, 46, bold, 8, TEAL);
+  drawText(page, companyAddressLine(), 40, 34, font, 8, MUTED);
+  drawText(page, `${companyPhoneLine()}  ·  ${COMPANY.email}`, 40, 22, font, 8, MUTED);
 
   return pdf.save();
 }
@@ -253,17 +257,18 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
 
   drawText(page, COMPANY.legalName.toUpperCase(), 118, y - 6, bold, 11, TEAL);
   drawText(page, "OUTSTANDING RECEIVABLES", 118, y - 24, bold, 16, INK);
+  drawText(page, companyAddressLine(), 118, y - 40, font, 8, MUTED);
   drawText(
     page,
     `${formatDate(new Date())}  ·  ${withDues.length} client${withDues.length === 1 ? "" : "s"}  ·  ${formatMoneyPdf(total)} due`,
     118,
-    y - 40,
+    y - 54,
     font,
     9,
     MUTED,
   );
 
-  y -= 72;
+  y -= 86;
   page.drawRectangle({ x: 40, y: y - 6, width: width - 80, height: 20, color: TEAL });
   const white = rgb(1, 1, 1);
   page.drawText("Client", { x: 48, y, size: 8, font: bold, color: white });
@@ -305,6 +310,7 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
   y -= 18;
   drawText(page, "Total the company will receive", 300, y, font, 9, MUTED);
   drawText(page, formatMoneyPdf(total), 450, y, bold, 12, TEAL);
+  drawText(page, `${companyPhoneLine()}  ·  ${COMPANY.email}`, 40, 28, font, 8, MUTED);
 
   return pdf.save();
 }

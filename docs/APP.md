@@ -2,13 +2,19 @@
 
 Internal app for **Cubity Engineering & Construction Company** to track money clients still owe: dues from site visits, partial payments, promised pay dates, and printable statements.
 
-Currency is shown as **Tk** (Bangladeshi Taka). Data is stored locally in SQLite (`prisma/dev.db`).
+**Office:** Manru Shopping City, Office 243, 1st Floor, Chowhatta, Sylhet  
+**Phones:** 01973-914236, 01711-331406, 01782-161432  
+**Email:** contact.cubity@gmail.com
+
+Currency is shown as **Tk** (Bangladeshi Taka). Data lives in **Neon Postgres**. The UI is **mobile-first** (thumb-zone bottom nav, large tap targets, hero money cards).
 
 ## Run locally
 
+Copy `.env.example` to `.env` and paste Neon `DATABASE_URL` (pooled) plus `DIRECT_URL` (direct). Then:
+
 ```bash
 npm install
-npx prisma db push
+npx prisma migrate deploy
 npm run dev
 ```
 
@@ -28,7 +34,7 @@ Name and phone are required to create a client. Address, email, company, site/pr
 
 | Where | What it does |
 | --- | --- |
-| `/` Dashboard | Company totals, aging, overdue list, upcoming promised payments, largest open balances |
+| `/` Dashboard | Visual cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp |
 | `/clients` | Search and filter clients (all / with dues / overdue / settled) |
 | `/clients/new` | Create a client profile |
 | `/clients/[id]` | Ledger, outstanding, promised date, call/WhatsApp, PDF, delete |
@@ -59,17 +65,23 @@ Name and phone are required to create a client. Address, email, company, site/pr
 
 ### Dashboard
 
-- **Total to collect** and how many clients still owe
-- **Overdue** — promised date already passed
-- **Promised soon** — promised dates in the next 14 days
-- **Collected this month** (with billed this month as context)
-- Aging of outstanding: current, 1–30, 31–60, 61–90, 90+ days (from original due date, oldest dues first)
-- Overdue follow-up list, upcoming promises, largest open balances
+Mobile-first visual summary (not a table dump):
+
+- Teal **hero card** with total to collect (the one number that matters)
+- Three **rings**: overdue share, promised-soon share, collected vs billed this month
+- **Donut** of outstanding mix: overdue / promised soon / later
+- **Line chart**: billed vs collected over the last 6 months
+- **Aging capsule** in color (current → 90+ days)
+- Horizontal bars for largest open balances
+- Overdue and upcoming queues
+- Cubity office stamp (Sylhet address, three phones, email)
+
+Bottom navigation on phones: Home, Clients, company PDF, Add client (center plus).
 
 ### PDFs
 
-- Per-client **due statement**: Cubity logo, billed / paid / outstanding, full ledger with dates and notes, remaining promised date
-- Company **outstanding receivables** list of everyone who still owes money
+- Per-client **due statement**: Cubity logo, Sylhet office contact, billed / paid / outstanding, full ledger with dates and notes, remaining promised date
+- Company **outstanding receivables** list with office address and phones
 
 ### Extra (beyond the original request)
 
@@ -86,12 +98,24 @@ These exist because construction collections usually fail on follow-up, not on t
 
 ## Data
 
-Prisma + SQLite:
+Prisma + **Neon Postgres** in production (SQLite only worked on this machine):
 
 - `Client` — profile fields + `nextPromisedDate`
 - `LedgerEntry` — `DUE` or `PAYMENT`, amount in poisha (Tk × 100), date, method, note, promised date snapshot
 
-The live database file is gitignored. Schema lives in `prisma/schema.prisma`.
+Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: `.env.example` (`DATABASE_URL` pooled, `DIRECT_URL` direct).
+
+## Deploy on Vercel + Neon
+
+1. Repo is on GitHub: `azizul-orvee/cubity-app`. Vercel should deploy on push.
+2. In the Vercel project: **Storage → Neon** (or Marketplace → Neon). Create a database.
+3. Set env vars on Vercel (Production + Preview):
+   - `DATABASE_URL` — Neon **pooled** URL (`-pooler` in the host, `sslmode=require`)
+   - `DIRECT_URL` — Neon **direct** URL (no pooler). If Neon only shows `DATABASE_URL_UNPOOLED`, paste that as `DIRECT_URL`.
+4. Redeploy after env vars exist. Build runs `prisma generate && prisma migrate deploy && next build`, which creates tables on Neon.
+5. Open the `*.vercel.app` URL.
+
+Local: copy `.env.example` to `.env` / `.env.local` and paste your Neon URLs. `npm run dev` then uses the same cloud database.
 
 ## Agent rules
 
@@ -102,5 +126,8 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Switched Prisma from SQLite to Neon Postgres (`DATABASE_URL` + `DIRECT_URL`) so Vercel builds can run `prisma migrate deploy`.
+- 2026-09-16 — Documented how to deploy on Vercel with Neon Postgres (SQLite cannot run on Vercel).
+- 2026-09-16 — Rebuilt the home summary with colorful rings, donut, 6-month line chart, aging capsule, and largest-balance bars; made the app mobile-first (bottom nav, larger tap targets, hero money cards). Put real Cubity Sylhet office, phones, and email on the dashboard and PDFs, and removed the demo client.
 - 2026-09-16 — Wrote this product doc and added Cursor rules so future changes stay documented and git commit/push wait for confirmation.
 - 2026-09-16 — First version of Cubity Receivables: clients, site-visit dues, partial payments, promised dates, dashboard totals, aging, overdue/upcoming lists, branded PDFs, call/WhatsApp, and local SQLite storage.

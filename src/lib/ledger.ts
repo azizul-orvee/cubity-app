@@ -1,5 +1,5 @@
 import type { Client, LedgerEntry } from "@prisma/client";
-import { addDays, isBefore, startOfDay } from "date-fns";
+import { addDays, format, isBefore, startOfDay, subMonths } from "date-fns";
 import { daysFromToday, isDateBeforeToday, startOfToday } from "@/lib/dates";
 
 export type LedgerType = "DUE" | "PAYMENT";
@@ -12,6 +12,14 @@ export const AGING_LABELS: Record<AgingKey, string> = {
   d31_60: "31–60 days",
   d61_90: "61–90 days",
   d90: "90+ days",
+};
+
+export const AGING_COLORS: Record<AgingKey, string> = {
+  current: "#2EC4B6",
+  d1_30: "#38BDF8",
+  d31_60: "#F59E0B",
+  d61_90: "#F97316",
+  d90: "#EF4444",
 };
 
 export type ClientWithEntries = Client & { entries: LedgerEntry[] };
@@ -219,7 +227,44 @@ export function companySnapshot(clients: ClientWithEntries[]) {
       .sort((a, b) => b.status.outstanding - a.status.outstanding)
       .slice(0, 8)
       .map((item) => ({ ...item.client, status: item.status })),
+    monthly: monthlySeries(clients, 6),
+    mix: {
+      overdue: overdue.reduce((sum, item) => sum + item.status.outstanding, 0),
+      upcoming: upcoming.reduce((sum, item) => sum + item.status.outstanding, 0),
+      later: Math.max(
+        0,
+        withDues.reduce((sum, item) => sum + item.status.outstanding, 0)
+          - overdue.reduce((sum, item) => sum + item.status.outstanding, 0)
+          - upcoming.reduce((sum, item) => sum + item.status.outstanding, 0),
+      ),
+    },
+    settledCount: clients.length - withDues.length,
   };
+}
+
+export function monthlySeries(clients: ClientWithEntries[], months = 6) {
+  const today = startOfToday();
+  const buckets = Array.from({ length: months }, (_, index) => {
+    const date = subMonths(today, months - 1 - index);
+    return {
+      key: format(date, "yyyy-MM"),
+      label: format(date, "MMM"),
+      billed: 0,
+      collected: 0,
+    };
+  });
+  const map = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+
+  for (const client of clients) {
+    for (const entry of client.entries) {
+      const bucket = map.get(format(entry.date, "yyyy-MM"));
+      if (!bucket) continue;
+      if (entry.type === "DUE") bucket.billed += entry.amount;
+      else bucket.collected += entry.amount;
+    }
+  }
+
+  return buckets;
 }
 
 export function whatsappHref(phone: string, message?: string) {

@@ -1,21 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { FileDown, LayoutDashboard, Plus, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { FileDown, LayoutDashboard, Menu, Plus, Users } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
-const links = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+const tabs = [
+  { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
 ];
 
@@ -23,105 +16,91 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-function NavLinks({ pathname, onClick }: { pathname: string; onClick?: () => void }) {
-  return (
-    <nav className="flex flex-col gap-1">
-      {links.map((link) => {
-        const Icon = link.icon;
-        const active = isActive(pathname, link.href);
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onClick}
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <Icon className="size-4" />
-            {link.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-full bg-[radial-gradient(circle_at_top_left,_rgba(46,196,182,0.12),_transparent_32%),linear-gradient(180deg,#f7fbfb_0%,#eef6f6_100%)]">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <div className="flex items-center gap-3">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="size-5" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72">
-                <SheetHeader>
-                  <SheetTitle>Cubity</SheetTitle>
-                </SheetHeader>
-                <div className="px-4">
-                  <NavLinks pathname={pathname} />
-                </div>
-              </SheetContent>
-            </Sheet>
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/cubity-logo.jpg"
-                alt="Cubity"
-                width={40}
-                height={40}
-                className="size-10 rounded-full ring-1 ring-border"
-                priority
-              />
-              <span className="leading-tight">
-                <span className="block text-sm font-semibold tracking-wide text-foreground">
-                  CUBITY
-                </span>
-                <span className="block text-[11px] text-muted-foreground">
-                  Receivables
-                </span>
+    <div className="min-h-dvh bg-[radial-gradient(120%_80%_at_0%_-10%,rgba(46,196,182,0.22),transparent_42%),radial-gradient(90%_60%_at_100%_0%,rgba(56,189,248,0.14),transparent_40%),linear-gradient(180deg,#f4fbfb_0%,#eef6f6_100%)]">
+      <header className="sticky top-0 z-40 border-b border-white/60 bg-white/75 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 pt-[env(safe-area-inset-top)]">
+          <Link href="/" className="flex min-h-11 items-center gap-2">
+            <Image
+              src="/cubity-logo.jpg"
+              alt="Cubity"
+              width={36}
+              height={36}
+              className="size-9 rounded-full ring-1 ring-border"
+              priority
+            />
+            <span className="leading-tight">
+              <span className="block text-[13px] font-semibold tracking-[0.14em] text-foreground">
+                CUBITY
               </span>
-            </Link>
-          </div>
-          <div className="hidden items-center gap-1 md:flex">
-            {links.map((link) => (
+              <span className="block text-[11px] text-muted-foreground">Receivables</span>
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-1 md:flex">
+            {tabs.map((tab) => (
               <Button
-                key={link.href}
-                variant={isActive(pathname, link.href) ? "secondary" : "ghost"}
+                key={tab.href}
+                variant={isActive(pathname, tab.href) ? "secondary" : "ghost"}
                 size="sm"
                 asChild
               >
-                <Link href={link.href}>{link.label}</Link>
+                <Link href={tab.href}>{tab.label}</Link>
               </Button>
             ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
-              <a href="/reports/outstanding">
-                <FileDown className="size-4" />
-                Company PDF
-              </a>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/clients/new">
-                <Plus className="size-4" />
-                Client
-              </Link>
-            </Button>
-          </div>
+          </nav>
+          <Button className="hidden min-h-10 md:inline-flex" asChild>
+            <Link href="/clients/new">
+              <Plus className="size-4" />
+              New client
+            </Link>
+          </Button>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-8">{children}</main>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:py-8 md:pb-8">
+        {children}
+      </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-4 px-2 pt-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = isActive(pathname, tab.href);
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={cn(
+                  "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="size-5" />
+                {tab.label}
+              </Link>
+            );
+          })}
+          <a
+            href="/reports/outstanding"
+            className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
+          >
+            <FileDown className="size-5" />
+            PDF
+          </a>
+          <Link
+            href="/clients/new"
+            className="-mt-5 flex flex-col items-center justify-center text-[11px] font-semibold text-primary"
+          >
+            <span className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(46,196,182,0.45)]">
+              <Plus className="size-6" />
+            </span>
+            Add
+          </Link>
+        </div>
+      </nav>
     </div>
   );
 }

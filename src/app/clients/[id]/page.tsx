@@ -1,16 +1,7 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileDown, MessageCircle, Pencil, Phone, Plus, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { DeleteClientButton, DeleteEntryButton } from "@/components/delete-buttons";
 import { DueStatusBadge } from "@/components/due-status-badge";
 import { PromisedDateForm } from "@/components/promised-date-form";
@@ -27,177 +18,164 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   const status = clientStatus(client);
   const ledger = runningLedger(client.entries);
-  const followUp = `Assalamu alaikum ${client.name}, this is Cubity. Your outstanding balance is ${formatMoney(status.outstanding)}.`;
+  const followUp = `Assalamu alaikum ${client.name}, this is Cubity Engineering & Construction. Your outstanding balance is ${formatMoney(status.outstanding)}. — contact.cubity@gmail.com`;
+  const paidPercent = status.totalDue > 0 ? Math.min(status.totalPaid / status.totalDue, 1) : 0;
 
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            <Link href="/clients" className="hover:text-foreground">
-              Clients
-            </Link>{" "}
-            / {client.name}
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{client.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {client.phone}
-            {client.organization ? ` · ${client.organization}` : ""}
-            {client.siteName ? ` · ${client.siteName}` : ""}
-          </p>
-          <div className="mt-3">
-            <DueStatusBadge status={status} />
+    <div className="grid gap-5">
+      <div>
+        <Link href="/clients" className="text-sm font-medium text-primary">
+          Clients
+        </Link>
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[1.65rem] leading-tight font-semibold tracking-tight">{client.name}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {client.phone}
+              {client.siteName ? ` · ${client.siteName}` : ""}
+            </p>
+            <div className="mt-2">
+              <DueStatusBadge status={status} />
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <a href={telHref(client.phone)}>
-              <Phone className="size-4" />
-              Call
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href={whatsappHref(client.phone, followUp)} target="_blank" rel="noreferrer">
-              <MessageCircle className="size-4" />
-              WhatsApp
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href={`/clients/${client.id}/statement`}>
-              <FileDown className="size-4" />
-              Due statement
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href={`/clients/${client.id}/edit`}>
-              <Pencil className="size-4" />
-              Edit
-            </Link>
-          </Button>
+          <Link
+            href={`/clients/${client.id}/edit`}
+            className="grid size-11 place-items-center rounded-full bg-white ring-1 ring-border"
+          >
+            <Pencil className="size-4" />
+            <span className="sr-only">Edit</span>
+          </Link>
         </div>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardDescription>Outstanding</CardDescription>
-            <CardTitle className="text-2xl">{formatMoney(status.outstanding)}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {status.credit > 0 ? `Advance / credit ${formatMoney(status.credit)}` : "Amount still to collect"}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Total billed</CardDescription>
-            <CardTitle className="text-2xl">{formatMoney(status.totalDue)}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Paid so far {formatMoney(status.totalPaid)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Promised date</CardDescription>
-            <CardTitle className="text-2xl">
-              {status.promised ? formatDate(status.promised) : "Not set"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {status.outstanding > 0 ? (
-              <PromisedDateForm clientId={client.id} promisedDate={client.nextPromisedDate} />
-            ) : (
-              <p className="text-sm text-muted-foreground">No remaining due.</p>
-            )}
-          </CardContent>
-        </Card>
+      <section className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#128C86] via-[#2EC4B6] to-[#7DD3FC] p-5 text-white shadow-[0_16px_32px_rgba(18,140,134,0.25)]">
+        <p className="text-xs font-semibold tracking-[0.16em] text-white/75 uppercase">Outstanding</p>
+        <p className="mt-1 text-4xl font-semibold">{formatMoney(status.outstanding)}</p>
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/20">
+          <div className="h-full rounded-full bg-white" style={{ width: `${paidPercent * 100}%` }} />
+        </div>
+        <p className="mt-2 text-sm text-white/85">
+          Paid {formatMoney(status.totalPaid)} of {formatMoney(status.totalDue)} billed
+        </p>
       </section>
 
-      <div className="flex flex-wrap gap-2">
-        <Button asChild>
-          <Link href={`/clients/${client.id}/due`}>
-            <Plus className="size-4" />
-            Add due / site visit
-          </Link>
-        </Button>
-        <Button variant="secondary" asChild>
-          <Link href={`/clients/${client.id}/pay`}>
-            <Wallet className="size-4" />
-            Log payment
-          </Link>
-        </Button>
+      <div className="grid grid-cols-2 gap-2">
+        <Action href={telHref(client.phone)} icon={<Phone className="size-5" />} label="Call" />
+        <Action href={whatsappHref(client.phone, followUp)} icon={<MessageCircle className="size-5" />} label="WhatsApp" external />
+        <Action href={`/clients/${client.id}/due`} icon={<Plus className="size-5" />} label="Add due" primary />
+        <Action href={`/clients/${client.id}/pay`} icon={<Wallet className="size-5" />} label="Log payment" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ledger</CardTitle>
-          <CardDescription>Every due and payment, with a running balance.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {ledger.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No dues yet. Log a site visit like: billed 10,000, received 3,000, remaining 7,000 promised Saturday.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead className="text-right">Due</TableHead>
-                  <TableHead className="text-right">Paid</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ledger.map((line) => (
-                  <TableRow key={line.entry.id}>
-                    <TableCell className="whitespace-nowrap">{formatDate(line.entry.date)}</TableCell>
-                    <TableCell>
-                      <p className="font-medium">
-                        {line.entry.type === "DUE" ? "Due added" : "Payment received"}
-                        {paymentMethodLabel(line.entry.method) ? ` · ${paymentMethodLabel(line.entry.method)}` : ""}
-                      </p>
-                      {line.entry.note ? (
-                        <p className="text-xs text-muted-foreground">{line.entry.note}</p>
-                      ) : null}
-                      {line.entry.promisedDate ? (
-                        <p className="text-xs text-muted-foreground">
-                          Remaining promised {formatDate(line.entry.promisedDate)}
-                        </p>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-right">{line.due ? formatMoney(line.due) : "—"}</TableCell>
-                    <TableCell className="text-right">{line.paid ? formatMoney(line.paid) : "—"}</TableCell>
-                    <TableCell className="text-right font-medium">{formatMoney(line.balance)}</TableCell>
-                    <TableCell className="text-right">
-                      <DeleteEntryButton entryId={line.entry.id} clientId={client.id} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <a
+        href={`/clients/${client.id}/statement`}
+        className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold ring-1 ring-border"
+      >
+        <FileDown className="size-4 text-primary" />
+        Download due statement
+      </a>
 
-      {client.address || client.email || client.notes ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2 text-sm">
-            {client.address ? <p>Address: {client.address}</p> : null}
-            {client.email ? <p>Email: {client.email}</p> : null}
-            {client.notes ? <p>Notes: {client.notes}</p> : null}
-          </CardContent>
-        </Card>
+      <section className="rounded-3xl bg-white p-4 ring-1 ring-border">
+        <p className="text-xs font-medium text-muted-foreground">Promised pay date</p>
+        <p className="mt-1 text-xl font-semibold">
+          {status.promised ? formatDate(status.promised) : "Not set"}
+        </p>
+        {status.outstanding > 0 ? (
+          <div className="mt-3">
+            <PromisedDateForm clientId={client.id} promisedDate={client.nextPromisedDate} />
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">No remaining due.</p>
+        )}
+      </section>
+
+      <section className="rounded-3xl bg-white p-4 ring-1 ring-border">
+        <h2 className="text-base font-semibold">Ledger</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Every due and payment, running balance.</p>
+        {ledger.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No dues yet. Log billed amount, paid now, and the promised date for the rest.
+          </p>
+        ) : (
+          <div className="grid gap-2">
+            {ledger.map((line) => (
+              <article key={line.entry.id} className="rounded-2xl bg-muted/60 px-3 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{formatDate(line.entry.date)}</p>
+                    <p className="font-medium">
+                      {line.entry.type === "DUE" ? "Due added" : "Payment received"}
+                      {paymentMethodLabel(line.entry.method) ? ` · ${paymentMethodLabel(line.entry.method)}` : ""}
+                    </p>
+                    {line.entry.note ? (
+                      <p className="text-xs text-muted-foreground">{line.entry.note}</p>
+                    ) : null}
+                    {line.entry.promisedDate ? (
+                      <p className="text-xs text-muted-foreground">
+                        Remaining promised {formatDate(line.entry.promisedDate)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="text-right">
+                    <p className={line.paid ? "font-semibold text-teal-600" : "font-semibold text-indigo-600"}>
+                      {line.due ? `+ ${formatMoney(line.due)}` : `− ${formatMoney(line.paid)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Bal {formatMoney(line.balance)}</p>
+                    <DeleteEntryButton entryId={line.entry.id} clientId={client.id} />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {client.address || client.email || client.notes || client.organization ? (
+        <section className="rounded-3xl bg-white p-4 text-sm ring-1 ring-border">
+          <h2 className="mb-2 text-base font-semibold">Profile</h2>
+          {client.organization ? <p>{client.organization}</p> : null}
+          {client.address ? <p className="text-muted-foreground">{client.address}</p> : null}
+          {client.email ? <p className="text-muted-foreground">{client.email}</p> : null}
+          {client.notes ? <p className="mt-2 text-muted-foreground">{client.notes}</p> : null}
+        </section>
       ) : null}
 
-      <div className="flex justify-end">
+      <div className="flex justify-center">
         <DeleteClientButton clientId={client.id} name={client.name} />
       </div>
     </div>
+  );
+}
+
+function Action({
+  href,
+  icon,
+  label,
+  primary,
+  external,
+}: {
+  href: string;
+  icon: ReactNode;
+  label: string;
+  primary?: boolean;
+  external?: boolean;
+}) {
+  const className = primary
+    ? "flex min-h-[4.25rem] flex-col items-center justify-center gap-1 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
+    : "flex min-h-[4.25rem] flex-col items-center justify-center gap-1 rounded-2xl bg-white text-sm font-semibold ring-1 ring-border";
+
+  if (href.startsWith("/") && !external) {
+    return (
+      <Link href={href} className={className}>
+        {icon}
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <a href={href} className={className} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
+      {icon}
+      {label}
+    </a>
   );
 }

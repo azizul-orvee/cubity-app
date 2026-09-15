@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   description:
     "Track client dues, partial payments, promised dates, and download due statements for Cubity Engineering & Construction Company.",
   icons: { icon: "/cubity-logo.jpg" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#128C86",
 };
 
 export const dynamic = "force-dynamic";
