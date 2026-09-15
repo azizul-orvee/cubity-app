@@ -15,10 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/submit-button";
 
 type State = { error?: string } | undefined;
+
+const fieldClass = "h-12 text-base md:h-12 md:text-base";
 
 export function PaymentForm({
   clientId,
@@ -36,39 +37,56 @@ export function PaymentForm({
 
   const paid = parseAmountToPoisha(amount) ?? 0;
   const remaining = outstanding - paid;
+  const stillDue = paid > 0 && remaining > 0;
+
+  let leftoverLabel = formatMoney(0);
+  if (remaining > 0) leftoverLabel = formatMoney(remaining);
+  if (remaining < 0) leftoverLabel = `${formatMoney(Math.abs(remaining))} credit`;
 
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action={formAction} className="grid gap-5">
       {state?.error ? (
-        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
-      <p className="text-sm text-muted-foreground">
-        Current outstanding is {formatMoney(outstanding)}. If they pay part of it, set the next promised date for what is left.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
+
+      <div className="grid gap-5">
         <div className="grid gap-2">
-          <Label htmlFor="date">Payment date</Label>
-          <Input id="date" name="date" type="date" required defaultValue={todayInputValue()} />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="amount">Amount received *</Label>
+          <Label htmlFor="amount" className="text-base">
+            Amount received
+          </Label>
           <Input
             id="amount"
             name="amount"
             inputMode="decimal"
             required
+            autoComplete="off"
+            enterKeyHint="next"
             placeholder="5000"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+            className={fieldClass}
           />
         </div>
         <div className="grid gap-2">
-          <Label>Method</Label>
+          <Label htmlFor="date" className="text-base">
+            Payment date
+          </Label>
+          <Input
+            id="date"
+            name="date"
+            type="date"
+            required
+            defaultValue={todayInputValue()}
+            className={fieldClass}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-base">Method</Label>
           <input type="hidden" name="method" value={method} />
           <Select value={method} onValueChange={setMethod}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className={`w-full ${fieldClass}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -80,26 +98,42 @@ export function PaymentForm({
             </SelectContent>
           </Select>
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="promisedDate">Next promised date</Label>
-          <Input id="promisedDate" name="promisedDate" type="date" required={paid > 0 && remaining > 0} />
-        </div>
-        <div className="grid gap-2 sm:col-span-2">
-          <Label htmlFor="note">Note</Label>
-          <Textarea id="note" name="note" placeholder="Partial payment, rest next Saturday..." />
-        </div>
+        {stillDue ? (
+          <div className="grid gap-2">
+            <Label htmlFor="promisedDate" className="text-base">
+              Next promised date
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              {formatMoney(remaining)} will still be due. When will they pay the rest?
+            </p>
+            <Input
+              id="promisedDate"
+              name="promisedDate"
+              type="date"
+              required
+              className={fieldClass}
+            />
+          </div>
+        ) : null}
       </div>
-      <div className="rounded-lg bg-muted px-3 py-2 text-sm">
+
+      <div className="rounded-xl bg-muted px-4 py-3 text-base">
         Remaining after this payment:{" "}
-        <span className="font-medium">
-          {remaining > 0 ? formatMoney(remaining) : remaining < 0 ? `${formatMoney(Math.abs(remaining))} credit` : formatMoney(0)}
-        </span>
+        <span className="font-semibold">{leftoverLabel}</span>
       </div>
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" asChild>
+
+      <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full text-base sm:w-auto md:h-12"
+          asChild
+        >
           <a href={`/clients/${clientId}`}>Cancel</a>
         </Button>
-        <SubmitButton>Save payment</SubmitButton>
+        <SubmitButton className="h-12 w-full text-base sm:min-w-40 sm:w-auto md:h-12">
+          Save payment
+        </SubmitButton>
       </div>
     </form>
   );

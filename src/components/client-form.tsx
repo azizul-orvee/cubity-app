@@ -11,54 +11,136 @@ import { SubmitButton } from "@/components/submit-button";
 
 type State = { error?: string } | undefined;
 
+const fieldClass = "h-12 text-base md:h-12 md:text-base";
+
 export function ClientForm({ client }: { client?: Client }) {
+  const isNew = !client;
   const bound = client ? updateClient.bind(null, client.id) : createClient;
   const [state, formAction] = useActionState(async (_prev: State, formData: FormData) => {
     return bound(formData);
   }, undefined);
 
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action={formAction} className="grid gap-5" autoComplete="on">
       {state?.error ? (
-        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+
+      <div className="grid gap-5">
         <div className="grid gap-2">
-          <Label htmlFor="name">Name *</Label>
-          <Input id="name" name="name" required defaultValue={client?.name} placeholder="e.g. Karim Rahman" />
+          <Label htmlFor="name" className="text-base">
+            Name
+          </Label>
+          <Input
+            id="name"
+            name="name"
+            required
+            autoComplete="name"
+            autoCapitalize="words"
+            enterKeyHint="next"
+            defaultValue={client?.name}
+            placeholder="e.g. Tarek Ahmed"
+            className={fieldClass}
+          />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="phone">Phone *</Label>
-          <Input id="phone" name="phone" required defaultValue={client?.phone} placeholder="01XXXXXXXXX" />
+          <Label htmlFor="phone" className="text-base">
+            Phone
+          </Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            required
+            autoComplete="tel"
+            enterKeyHint="next"
+            defaultValue={client?.phone}
+            placeholder="01XXXXXXXXX"
+            className={fieldClass}
+          />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="organization">Company / organization</Label>
-          <Input id="organization" name="organization" defaultValue={client?.organization ?? ""} placeholder="Optional" />
+          <Label htmlFor="email" className="text-base">
+            Email <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            enterKeyHint="next"
+            defaultValue={client?.email ?? ""}
+            placeholder="name@email.com"
+            className={fieldClass}
+          />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" defaultValue={client?.email ?? ""} placeholder="Optional" />
+          <Label htmlFor="address" className="text-base">
+            Address <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="address"
+            name="address"
+            autoComplete="street-address"
+            enterKeyHint={isNew ? "done" : "next"}
+            defaultValue={client?.address ?? ""}
+            placeholder="House, road, area"
+            className={fieldClass}
+          />
         </div>
-        <div className="grid gap-2 sm:col-span-2">
-          <Label htmlFor="address">Address</Label>
-          <Input id="address" name="address" defaultValue={client?.address ?? ""} placeholder="Site or billing address" />
-        </div>
-        <div className="grid gap-2 sm:col-span-2">
-          <Label htmlFor="siteName">Current site / project</Label>
-          <Input id="siteName" name="siteName" defaultValue={client?.siteName ?? ""} placeholder="e.g. Gulshan apartment finishing" />
-        </div>
-        <div className="grid gap-2 sm:col-span-2">
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea id="notes" name="notes" defaultValue={client?.notes ?? ""} placeholder="Anything useful to remember about this client" />
-        </div>
+
+        {client ? (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="organization">Company / organization</Label>
+              <Input
+                id="organization"
+                name="organization"
+                defaultValue={client.organization ?? ""}
+                placeholder="Optional"
+                className={fieldClass}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="siteName">Current site / project</Label>
+              <Input
+                id="siteName"
+                name="siteName"
+                defaultValue={client.siteName ?? ""}
+                placeholder="Optional"
+                className={fieldClass}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={client.notes ?? ""}
+                placeholder="Anything useful to remember"
+                className="min-h-24 text-base"
+              />
+            </div>
+          </>
+        ) : null}
       </div>
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" asChild>
+
+      <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full text-base sm:w-auto md:h-12"
+          asChild
+        >
           <a href={client ? `/clients/${client.id}` : "/clients"}>Cancel</a>
         </Button>
-        <SubmitButton>{client ? "Save client" : "Create client"}</SubmitButton>
+        <SubmitButton className="h-12 w-full text-base sm:min-w-40 sm:w-auto md:h-12">
+          {client ? "Save client" : "Create client"}
+        </SubmitButton>
       </div>
     </form>
   );

@@ -20,7 +20,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) (or the port Next.js prints if 3000 is busy).
 
-Name and phone are required to create a client. Address, email, company, site/project, and notes are optional.
+Name and phone are required to create a client. Email and address are optional. Company, site/project, and notes are only on the edit screen.
 
 ## Core story
 
@@ -36,12 +36,12 @@ Name and phone are required to create a client. Address, email, company, site/pr
 | --- | --- |
 | `/` Dashboard | Visual cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp |
 | `/clients` | Search and filter clients (all / with dues / overdue / settled) |
-| `/clients/new` | Create a client profile |
+| `/clients/new` | Add a client: name and phone required, email and address optional |
 | `/clients/[id]` | Ledger, outstanding, promised date, call/WhatsApp, PDF, delete |
 | `/clients/[id]/edit` | Edit profile |
 | `/clients/[id]/due` | Add a due / site visit (billed + paid now + promised date) |
-| `/clients/[id]/pay` | Log a payment (partial allowed; new promised date if anything remains) |
-| `/clients/[id]/statement` | Download that client's due statement PDF |
+| `/clients/[id]/pay` | Log a payment (amount, date, method; promised date only if money remains) |
+| `/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim.pdf`) |
 | `/reports/outstanding` | Download a company-wide outstanding PDF |
 
 ## Features
@@ -49,7 +49,8 @@ Name and phone are required to create a client. Address, email, company, site/pr
 ### Client profiles
 
 - Required: name, phone
-- Optional: organization, email, address, current site/project, notes
+- Optional on add: email, address
+- Company, site/project, and notes can be filled later on edit
 - Call (`tel:`) and WhatsApp links on the profile (Bangladesh `01…` numbers are sent as `880…`)
 
 ### Dues and payments
@@ -58,6 +59,7 @@ Name and phone are required to create a client. Address, email, company, site/pr
 - Remaining amount is calculated live
 - Promised date is required whenever money is still outstanding after the save
 - Later partial payments update the running balance and the next promised date
+- Log payment is a short phone form: amount, date, method; promised date only if leftover. No payment notes.
 - Overpayment is allowed and shown as advance/credit
 - Payment methods: cash, bank transfer, bKash, Nagad, Rocket, cheque, other
 - Ledger shows a running balance; entries can be deleted
@@ -124,6 +126,10 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Named each client due-statement download after the client (`Azizul-Hakim.pdf`) instead of a generic statement filename.
+- 2026-09-16 — Tightened PDF table padding so Pending is not clipped, darkened footer type, and bumped body type one size for phone reading.
+- 2026-09-16 — Simplified Log payment for phones: dropped the note field, stacked large inputs, and only ask for the next promised date when money is still due.
+- 2026-09-16 — Simplified Add client for phones: only name, phone, optional email and address. Dropped company, site, and notes from that screen; larger fields and a full-width Create button.
 - 2026-09-16 — Clipped the PDF letterhead logo to a circle so the square frame around the JPEG no longer shows.
 - 2026-09-16 — Moved the due-statement header company name, title, and issue date to the right, leaving the logo on the left.
 - 2026-09-16 — Restyled the client due-statement PDF: logo-only header on the left, company name plus a smaller title on the right, no header address, taller outstanding box so the promised date no longer clips, Balance renamed to Pending, and outstanding amounts in red. Footer address is centered and larger.
