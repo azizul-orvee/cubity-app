@@ -8,6 +8,7 @@ import { formatMoney, parseAmountToPoisha } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { receivables } from "@/lib/routes";
 import {
   Select,
   SelectContent,
@@ -87,6 +88,20 @@ export function DueForm({
           <Label htmlFor="promisedDate">Promised date for remaining</Label>
           <Input id="promisedDate" name="promisedDate" type="date" required={billedAmount > 0 && remainingTotal > 0} />
         </div>
+        {remainingTotal > 0 && billedAmount > 0 ? (
+          <div className="grid gap-2">
+            <Label htmlFor="promisedAmount">Amount they promised next</Label>
+            <p className="text-sm text-muted-foreground">
+              Leave blank for the full {formatMoney(remainingTotal)}. Or enter a smaller installment.
+            </p>
+            <Input
+              id="promisedAmount"
+              name="promisedAmount"
+              inputMode="decimal"
+              placeholder={(remainingTotal / 100).toString()}
+            />
+          </div>
+        ) : null}
         {receivedAmount > 0 ? (
           <div className="grid gap-2">
             <Label>Payment method</Label>
@@ -122,7 +137,7 @@ export function DueForm({
       </div>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" asChild>
-          <a href={`/clients/${clientId}`}>Cancel</a>
+          <a href={receivables.client(clientId)}>Cancel</a>
         </Button>
         <SubmitButton>Save due</SubmitButton>
       </div>

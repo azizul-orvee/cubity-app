@@ -1,12 +1,12 @@
-# Cubity Receivables
+# Cubity
 
-Internal app for **Cubity Engineering & Construction Company** to track money clients still owe: dues from site visits, partial payments, promised pay dates, and printable statements.
+Internal workspace for **Cubity Engineering & Construction Company**. The home screen is a product hub. **Receivables** is live (client dues, payments, statements). **Invoice maker** is a placeholder for the next product. New tools should get their own folder under `src/app/` and a card on `/`.
 
 **Office:** Manru Shopping City, Office 243, 1st Floor, Chowhatta, Sylhet  
 **Phones:** 01973-914236, 01711-331406, 01782-161432  
 **Email:** contact.cubity@gmail.com
 
-Currency is shown as **Tk** (Bangladeshi Taka). Data lives in **Neon Postgres**. The UI is **mobile-first** (thumb-zone bottom nav, large tap targets, hero money cards).
+Currency is shown as **Tk** (Bangladeshi Taka). Data lives in **Neon Postgres**. The receivables UI is **mobile-first** (thumb-zone bottom nav, large tap targets, hero money cards).
 
 ## Run locally
 
@@ -25,7 +25,7 @@ Name and phone are required to create a client. Email and address are optional. 
 ## Core story
 
 1. Site visit: client was supposed to pay Tk 10,000, paid Tk 3,000, promised the remaining Tk 7,000 for Saturday.
-2. Log that as a due of 10,000, payment of 3,000, remaining 7,000, promised date = that Saturday.
+2. Log that as a due of 10,000, payment of 3,000, remaining 7,000. Promised date = Saturday. If they will only bring 3,000 on Saturday, set promised amount to 3,000.
 3. On Saturday they pay Tk 5,000 and keep Tk 2,000 due for another day.
 4. Log a payment of 5,000 and a new promised date for the leftover 2,000.
 5. Dashboard total outstanding drops as money comes in. The client PDF lists every due, every payment, dates, and what is still pending.
@@ -34,15 +34,32 @@ Name and phone are required to create a client. Email and address are optional. 
 
 | Where | What it does |
 | --- | --- |
-| `/` Dashboard | Visual cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp |
-| `/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
-| `/clients/new` | Add a client: name and phone required, email and address optional |
-| `/clients/[id]` | Ledger, outstanding, promised date, call/WhatsApp, PDF, delete |
-| `/clients/[id]/edit` | Edit profile |
-| `/clients/[id]/due` | Add a due / site visit (billed + paid now + promised date) |
-| `/clients/[id]/pay` | Log a payment (amount, date, method; promised date only if money remains) |
-| `/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim.pdf`) |
-| `/reports/outstanding` | Download a company-wide outstanding PDF |
+| `/` Workspace | Cubity header and office footer. Two product cards: Receivables and Invoice maker |
+| `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp |
+| `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
+| `/receivables/clients/new` | Add a client: name and phone required, email and address optional |
+| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF, delete |
+| `/receivables/clients/[id]/edit` | Edit profile |
+| `/receivables/clients/[id]/due` | Add a due / site visit (billed + paid now + promised date + optional promised amount) |
+| `/receivables/clients/[id]/pay` | Log a payment (amount, date, method; promised date and optional amount if money remains) |
+| `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim.pdf`), including bKash and bank payment details |
+| `/receivables/settings` | Edit the bKash number and bank account printed on due statements |
+| `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
+| `/invoices` | Invoice maker placeholder until that product is built |
+
+Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
+
+## Architecture
+
+The site is a **workspace**, not a single app. Each product owns a folder:
+
+- `src/app/page.tsx` — hub cards
+- `src/app/receivables/` — dues app (`AppShell` header + bottom nav)
+- `src/app/invoices/` — invoice maker (placeholder until it is built)
+- `src/components/site-chrome.tsx` — Cubity header + office footer for hub and non-receivables screens
+- `src/lib/routes.ts` — path helpers so links do not hard-code product URLs
+
+To add another product later: create `src/app/<name>/`, add paths in `routes.ts`, and put a card on `/`.
 
 ## Features
 
@@ -58,12 +75,13 @@ Name and phone are required to create a client. Email and address are optional. 
 - Add what became due and how much was collected on the spot
 - Remaining amount is calculated live
 - Promised date is required whenever money is still outstanding after the save
-- Later partial payments update the running balance and the next promised date
-- Log payment is a short phone form: amount, date, method; promised date only if leftover. No payment notes.
+- Promised amount is optional: leave it blank for the full leftover, or enter a smaller installment (e.g. Tk 100 outstanding, Tk 50 promised in 7 days)
+- Later partial payments update the running balance and the next promised date and amount
+- Log payment is a short phone form: amount, date, method; promised date and optional amount if leftover. No payment notes.
 - Overpayment is allowed and shown as advance/credit
 - Payment methods: cash, bank transfer, bKash, Nagad, Rocket, cheque, other
 - Ledger shows a running balance; entries can be deleted
-- Promised date can be changed on the client page without logging money
+- Promised date and amount can be changed on the client page without logging money
 
 ### Dashboard
 
@@ -78,13 +96,14 @@ Mobile-first visual summary (not a table dump):
 - Overdue and upcoming queues
 - Cubity office stamp (Sylhet address, three phones, email)
 
-Bottom navigation on phones: Home, Clients, company PDF (asks to confirm before download), Add client (center plus).
+Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account).
 
 Opening Clients (or a client account) from Home shows the **Cubity seal appearing** while the database catches up: paint-in, bloom from the cube, or rise from the bottom — one of the three at random. Same on the website and in the Android app.
 
 ### PDFs
 
-- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised, a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Footer uses location, phone, and email icons.
+- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance), a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
+- Payment details are edited at `/receivables/settings` (gear in the receivables header). Defaults: bKash `01973 914236`; NRB Bank, Sylhet Main Branch, MD TAREK AHMED, A/C `7087010002828`, routing `290913794`.
 - Company **outstanding receivables** list with office address and phones
 - Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
@@ -105,8 +124,8 @@ These exist because construction collections usually fail on follow-up, not on t
 
 Prisma + **Neon Postgres** in production (SQLite only worked on this machine):
 
-- `Client` — profile fields + `nextPromisedDate`
-- `LedgerEntry` — `DUE` or `PAYMENT`, amount in poisha (Tk × 100), date, method, note, promised date snapshot
+- `Client` — profile fields + `nextPromisedDate` + `nextPromisedAmount` (poisha; the installment they said they will bring next)
+- `LedgerEntry` — `DUE` or `PAYMENT`, amount in poisha (Tk × 100), date, method, note, promised date and amount snapshot
 
 Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: `.env.example` (`DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` direct).
 
@@ -134,7 +153,7 @@ cd android && ./gradlew assembleRelease
 cp app/build/outputs/apk/release/app-release.apk ../dist/Cubity.apk
 ```
 
-The APK always loads `https://cubity-app.vercel.app/`. **Most changes do not need a new APK.** Screens, spacing, forms, PDFs, and data updates go live on Vercel; close and reopen Cubity (or pull to refresh) and the phone shows them.
+The APK always loads `https://cubity-app.vercel.app/`. That is now the workspace hub; Receivables is one tap from there. **Most changes do not need a new APK.** Screens, spacing, forms, PDFs, and data updates go live on Vercel; close and reopen Cubity (or pull to refresh) and the phone shows them.
 
 Install a new `dist/Cubity.apk` only when the Android shell itself changes: icon, splash, status bar, keyboard lifting, or the package. I will say so when that happens.
 
@@ -157,6 +176,12 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Cropped empty space off the bKash crane PNG so the mark sits on the same left edge as the pink bar on due statements.
+- 2026-09-16 — Added a promised amount next to the promised date so a client can commit to paying only part of the outstanding (app forms, client page, dashboard Coming up, and due-statement PDF).
+- 2026-09-16 — Put payment instructions back under the ledger on due statements, as in the first layout, while keeping the real bKash and NRB logos.
+- 2026-09-16 — Replaced the drawn bKash and NRB marks on due statements and payment settings with the real logos.
+- 2026-09-16 — Added bKash and bank payment details to client due statements, with a settings screen (gear in Receivables) so the number and account can be edited. Defaults are the personal bKash `01973 914236` and the NRB Bank Sylhet Main Branch account.
+- 2026-09-16 — Turned `/` into a Cubity workspace hub with Receivables and Invoice maker cards, header, and office footer. Moved the live dues app under `/receivables` so more products can sit beside it.
 - 2026-09-16 — Lined up Due, Paid, and Pending headers with their amounts on the client due-statement PDF.
 - 2026-09-16 — Wrapped long Particulars onto two lines on the client due-statement PDF and moved Due right so the text no longer runs into the amount columns.
 - 2026-09-16 — Replaced the busy survey-stamp loader with three quieter Cubity-seal appearances (paint-in, bloom, rise), picked at random each time Clients or a client account loads.

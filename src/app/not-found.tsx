@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { hubPath, receivables } from "@/lib/routes";
 
 export default function NotFound() {
   return (
@@ -11,10 +12,10 @@ export default function NotFound() {
         </p>
         <div className="flex justify-center gap-2">
           <Button asChild>
-            <Link href="/">Dashboard</Link>
+            <Link href={hubPath}>Workspace</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/clients">Clients</Link>
+            <Link href={receivables.clients}>Clients</Link>
           </Button>
         </div>
       </div>

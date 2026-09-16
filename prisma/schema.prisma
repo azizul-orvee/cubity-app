@@ -18,6 +18,7 @@ model Client {
   siteName         String?
   notes            String?
   nextPromisedDate DateTime?
+  nextPromisedAmount Int?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   entries          LedgerEntry[]
@@ -33,8 +34,20 @@ model LedgerEntry {
   method       String?
   note         String?
   promisedDate DateTime?
+  promisedAmount Int?
   createdAt    DateTime @default(now())
 
   @@index([clientId])
   @@index([date])
+}
+
+model CompanyPayment {
+  id                 String   @id
+  bkashNumber        String
+  bankName           String
+  bankBranch         String
+  bankAccountName    String
+  bankAccountNumber  String
+  bankRoutingNumber  String?
+  updatedAt          DateTime @updatedAt
 }

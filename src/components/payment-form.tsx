@@ -8,6 +8,7 @@ import { formatMoney, parseAmountToPoisha } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { receivables } from "@/lib/routes";
 import {
   Select,
   SelectContent,
@@ -113,6 +114,19 @@ export function PaymentForm({
               required
               className={fieldClass}
             />
+            <Label htmlFor="promisedAmount" className="text-base">
+              Amount they promised next
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Leave blank for the full leftover. Use a smaller number if they will only bring part of it.
+            </p>
+            <Input
+              id="promisedAmount"
+              name="promisedAmount"
+              inputMode="decimal"
+              placeholder={(remaining / 100).toString()}
+              className={fieldClass}
+            />
           </div>
         ) : null}
       </div>
@@ -129,7 +143,7 @@ export function PaymentForm({
           className="h-12 w-full text-base sm:w-auto md:h-12"
           asChild
         >
-          <a href={`/clients/${clientId}`}>Cancel</a>
+          <a href={receivables.client(clientId)}>Cancel</a>
         </Button>
         <SubmitButton className="h-12 w-full text-base sm:min-w-40 sm:w-auto md:h-12">
           Save payment

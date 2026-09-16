@@ -16,14 +16,14 @@ export default async function AddDuePage({ params }: { params: Promise<{ id: str
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Add due for {client.name}</h1>
         <p className="text-sm text-muted-foreground">
-          Example: billed 10,000, paid 3,000 now, remaining 7,000 promised for Saturday.
+          Example: billed 10,000, paid 3,000 now, remaining 7,000. They can promise 3,000 in seven days and leave the rest unscheduled.
         </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Site visit / new due</CardTitle>
           <CardDescription>
-            Current outstanding is {formatMoney(status.outstanding)}. The remaining promised date applies to what is still unpaid after this visit.
+            Current outstanding is {formatMoney(status.outstanding)}. Set a promised date, and optionally a smaller installment if they will not clear the rest at once.
           </CardDescription>
         </CardHeader>
         <CardContent>

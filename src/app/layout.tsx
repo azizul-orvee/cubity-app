@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { NativeAppClass } from "@/components/native-app-class";
-import { AppShell } from "@/components/app-shell";
+import { RouteStamp } from "@/components/route-stamp";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,11 +18,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cubity Receivables",
+    default: "Cubity",
     template: "%s · Cubity",
   },
   description:
-    "Track client dues, partial payments, promised dates, and download due statements for Cubity Engineering & Construction Company.",
+    "Cubity Engineering & Construction workspace: receivables, invoices, and more.",
   icons: { icon: "/cubity-logo.jpg" },
 };
 
@@ -47,7 +47,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex h-full min-h-full flex-col">
         <NativeAppClass />
         <TooltipProvider>
-          <AppShell>{children}</AppShell>
+          {children}
+          <RouteStamp />
           <Toaster />
         </TooltipProvider>
       </body>

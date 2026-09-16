@@ -8,6 +8,7 @@ import {
   clip,
   closePath,
   endPath,
+  lineTo,
   moveTo,
   popGraphicsState,
   pushGraphicsState,
@@ -17,7 +18,7 @@ import {
   type PDFPage,
   type RGB,
 } from "pdf-lib";
-import { COMPANY, companyAddressLine, companyPhoneLine, paymentMethodLabel } from "@/lib/company";
+import { COMPANY, companyAddressLine, companyPhoneLine, paymentMethodLabel, type PaymentInstructions } from "@/lib/company";
 import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, type ClientWithEntries } from "@/lib/ledger";
 import { formatMoneyPdf } from "@/lib/money";
@@ -31,16 +32,28 @@ const HAIR = rgb(0.78, 0.84, 0.84);
 const WASH = rgb(0.96, 0.98, 0.98);
 const RED = rgb(0.68, 0.1, 0.14);
 const WHITE = rgb(1, 1, 1);
+const BKASH = rgb(0.886, 0.075, 0.431);
+const NRB = rgb(0.043, 0.31, 0.22);
 
 const PAGE = { width: 595.28, height: 841.89 };
 const MARGIN = 48;
 const CELL_PAD = 12;
+const FOOTER_RULE_Y = 68;
 
 const ICON_PIN =
   "M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z M12 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6z";
 const ICON_PHONE =
   "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z";
 const ICON_MAIL = "M3 5 L21 5 L21 19 L3 19 Z M3 5 L12 12.5 L21 5";
+
+async function loadPng(pdf: PDFDocument, filename: string) {
+  try {
+    const bytes = await readFile(path.join(process.cwd(), "public", filename));
+    return pdf.embedPng(bytes);
+  } catch {
+    return null;
+  }
+}
 
 async function loadLogo(pdf: PDFDocument) {
   try {
@@ -163,6 +176,25 @@ function drawStrokeIcon(page: PDFPage, path: string, x: number, y: number, size:
   });
 }
 
+function drawLogoFit(
+  page: PDFPage,
+  logo: PDFImage,
+  x: number,
+  y: number,
+  maxWidth: number,
+  maxHeight: number,
+) {
+  const ratio = logo.width / logo.height;
+  let width = maxWidth;
+  let height = width / ratio;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height * ratio;
+  }
+  page.drawImage(logo, { x, y, width, height });
+  return { width, height };
+}
+
 function drawCircularLogo(page: PDFPage, logo: PDFImage, x: number, y: number, size: number) {
   const cx = x + size / 2;
   const cy = y + size / 2;
@@ -254,8 +286,8 @@ function drawLetterhead(
 function drawContactFooter(page: PDFPage, font: PDFFont) {
   const { width } = page.getSize();
   page.drawLine({
-    start: { x: MARGIN, y: 68 },
-    end: { x: width - MARGIN, y: 68 },
+    start: { x: MARGIN, y: FOOTER_RULE_Y },
+    end: { x: width - MARGIN, y: FOOTER_RULE_Y },
     thickness: 0.5,
     color: HAIR,
   });
@@ -281,11 +313,168 @@ function drawContactFooter(page: PDFPage, font: PDFFont) {
   }
 }
 
-export async function buildClientStatementPdf(client: ClientWithEntries) {
+function drawPayCard(
+  page: PDFPage,
+  box: { x: number; y: number; width: number; height: number },
+  accent: RGB,
+  logo: PDFImage | null,
+  kicker: string,
+  title: string,
+  lines: { text: string; size: number; bold?: boolean; color?: RGB }[],
+  fonts: { regular: PDFFont; bold: PDFFont },
+) {
+  page.drawRectangle({
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height,
+    color: WASH,
+  });
+  page.drawRectangle({
+    x: box.x,
+    y: box.y,
+    width: 2.75,
+    height: box.height,
+    color: accent,
+  });
+  page.drawRectangle({
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height,
+    borderColor: HAIR,
+    borderWidth: 0.45,
+  });
+
+  const pad = 12;
+  const logoMaxH = 32;
+  const logoMaxW = 64;
+  const innerLeft = box.x + pad + 4;
+  let textX = innerLeft;
+  if (logo) {
+    const drawn = drawLogoFit(page, logo, innerLeft, box.y + box.height - pad - logoMaxH, logoMaxW, logoMaxH);
+    textX = innerLeft + drawn.width + 10;
+  }
+
+  const titleMax = box.x + box.width - pad - textX;
+  drawTracked(page, kicker, textX, box.y + box.height - pad - 8, fonts.bold, 7, 0.7, MUTED);
+  drawText(
+    page,
+    fitLine(title, fonts.bold, 10, titleMax),
+    textX,
+    box.y + box.height - pad - 22,
+    fonts.bold,
+    10,
+    INK,
+  );
+
+  const ruleY = box.y + box.height - pad - 34;
+  page.drawLine({
+    start: { x: innerLeft, y: ruleY },
+    end: { x: box.x + box.width - pad, y: ruleY },
+    thickness: 0.4,
+    color: HAIR,
+  });
+
+  let lineY = ruleY - 16;
+  const valueMax = box.width - pad * 2 - 8;
+  for (const line of lines) {
+    drawText(
+      page,
+      fitLine(line.text, line.bold ? fonts.bold : fonts.regular, line.size, valueMax),
+      innerLeft,
+      lineY,
+      line.bold ? fonts.bold : fonts.regular,
+      line.size,
+      line.color ?? INK,
+    );
+    lineY -= line.size + 6;
+  }
+}
+
+function drawPaymentInstructions(
+  page: PDFPage,
+  y: number,
+  width: number,
+  fonts: { regular: PDFFont; bold: PDFFont },
+  logos: { bkash: PDFImage | null; nrb: PDFImage | null },
+  payment: PaymentInstructions,
+) {
+  const showBkash = Boolean(payment.bkashNumber.trim());
+  const showBank = Boolean(payment.bankAccountNumber.trim() && payment.bankName.trim());
+  if (!showBkash && !showBank) return y;
+
+  drawTracked(page, "PAYMENT INSTRUCTIONS", MARGIN, y, fonts.bold, 8, 0.85, MUTED);
+  y -= 13;
+  drawText(
+    page,
+    "Kindly remit the outstanding balance to either of the following accounts.",
+    MARGIN,
+    y,
+    fonts.regular,
+    9,
+    MUTED,
+  );
+  y -= 16;
+
+  const gap = 10;
+  const contentWidth = width - MARGIN * 2;
+  const cardHeight = 118;
+  const cardWidth = showBkash && showBank ? (contentWidth - gap) / 2 : contentWidth;
+  const cardBottom = y - cardHeight;
+
+  if (showBkash) {
+    drawPayCard(
+      page,
+      { x: MARGIN, y: cardBottom, width: cardWidth, height: cardHeight },
+      BKASH,
+      logos.bkash,
+      "BKASH",
+      "Personal wallet",
+      [{ text: payment.bkashNumber, size: 13, bold: true, color: INK }],
+      fonts,
+    );
+  }
+
+  if (showBank) {
+    const bankLines: { text: string; size: number; bold?: boolean; color?: RGB }[] = [
+      { text: payment.bankAccountName, size: 10, bold: true },
+      { text: `A/C  ${payment.bankAccountNumber}`, size: 10, bold: true },
+      { text: payment.bankBranch, size: 9, color: MUTED },
+    ];
+    if (payment.bankRoutingNumber) {
+      bankLines.push({ text: `Routing  ${payment.bankRoutingNumber}`, size: 8, color: MUTED });
+    }
+    drawPayCard(
+      page,
+      {
+        x: showBkash ? MARGIN + cardWidth + gap : MARGIN,
+        y: cardBottom,
+        width: cardWidth,
+        height: cardHeight,
+      },
+      NRB,
+      logos.nrb,
+      "BANK TRANSFER",
+      payment.bankName,
+      bankLines,
+      fonts,
+    );
+  }
+
+  return cardBottom - 8;
+}
+
+export async function buildClientStatementPdf(
+  client: ClientWithEntries,
+  payment: PaymentInstructions,
+) {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const logo = await loadLogo(pdf);
+  const bkashLogo = await loadPng(pdf, "bkash-mark.png");
+  const nrbLogo = await loadPng(pdf, "nrb-mark.png");
   const status = clientStatus(client);
   const lines = runningLedger(client.entries);
 
@@ -310,11 +499,14 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
   }
 
   const boxWidth = 232;
+  const showPromise = Boolean(status.promised && status.outstanding > 0);
+  const showInstallment = Boolean(showPromise && status.promisedPartial);
+  const boxHeight = 96 + (showInstallment ? 14 : 0);
   const box = {
     x: width - MARGIN - boxWidth,
     width: boxWidth,
-    height: 96,
-    bottom: y - 82,
+    height: boxHeight,
+    bottom: y + 14 - boxHeight,
   };
   page.drawRectangle({
     x: box.x,
@@ -351,6 +543,11 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
   drawText(page, "Paid", innerLeft, boxY, regular, 9, MUTED);
   drawRight(page, formatMoneyPdf(status.totalPaid), innerRight, boxY, regular, 9, INK);
   if (status.promised && status.outstanding > 0) {
+    if (status.promisedPartial) {
+      boxY -= 14;
+      drawText(page, "Next promised", innerLeft, boxY, regular, 9, MUTED);
+      drawRight(page, formatMoneyPdf(status.promisedAmount), innerRight, boxY, regular, 9, INK);
+    }
     boxY -= 14;
     drawText(
       page,
@@ -440,7 +637,11 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
       line.entry.type === "DUE" ? "Due billed" : "Payment received",
       paymentMethodLabel(line.entry.method),
       line.entry.note,
-      line.entry.promisedDate ? `Balance promised ${formatDate(line.entry.promisedDate)}` : null,
+      line.entry.promisedDate
+        ? `Balance promised ${formatDate(line.entry.promisedDate)}${
+            line.entry.promisedAmount ? ` ${formatMoneyPdf(line.entry.promisedAmount)}` : ""
+          }`
+        : null,
     ].filter(Boolean);
     const wrapped = wrapParticulars(detailParts.join(" · "), regular, 9, particularsWidth);
     const rowHeight = 22 + Math.max(0, wrapped.length - 1) * 13;
@@ -490,13 +691,37 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
 
   y -= 32;
   if (client.notes) {
+    if (y < 200) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
+      ({ width, height } = page.getSize());
+      page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+      y = height - 36;
+    }
     drawTracked(page, "NOTES", MARGIN, y, bold, 8, 0.8, MUTED);
     y -= 14;
     for (const noteLine of wrapText(client.notes, regular, 10, width - MARGIN * 2)) {
       drawText(page, noteLine, MARGIN, y, regular, 10, MUTED);
       y -= 13;
     }
+    y -= 18;
   }
+
+  const remittanceHeight = 154;
+  if (y < 80 + remittanceHeight) {
+    page = pdf.addPage([PAGE.width, PAGE.height]);
+    ({ width, height } = page.getSize());
+    page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+    y = height - 40;
+  }
+
+  drawPaymentInstructions(
+    page,
+    y,
+    width,
+    { regular, bold },
+    { bkash: bkashLogo, nrb: nrbLogo },
+    payment,
+  );
 
   drawContactFooter(page, regular);
   return pdf.save();
@@ -554,7 +779,11 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
     drawText(page, item.client.phone, 220, y, regular, 9, MUTED);
     drawText(
       page,
-      item.status.promised ? formatDate(item.status.promised) : "Not set",
+      item.status.promised
+        ? item.status.promisedPartial
+          ? `${formatMoneyPdf(item.status.promisedAmount)} · ${formatDate(item.status.promised)}`
+          : formatDate(item.status.promised)
+        : "Not set",
       340,
       y,
       regular,

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/dates";
 import type { clientStatus } from "@/lib/ledger";
+import { formatMoney } from "@/lib/money";
 
 type Status = ReturnType<typeof clientStatus>;
 
@@ -18,7 +19,13 @@ export function DueStatusBadge({ status }: { status: Status }) {
     return <Badge>Due today</Badge>;
   }
   if (status.promised) {
-    return <Badge variant="outline">Promised {formatDate(status.promised)}</Badge>;
+    return (
+      <Badge variant="outline">
+        {status.promisedPartial
+          ? `${formatMoney(status.promisedAmount)} by ${formatDate(status.promised)}`
+          : `Promised ${formatDate(status.promised)}`}
+      </Badge>
+    );
   }
   return <Badge variant="outline">Unscheduled</Badge>;
 }

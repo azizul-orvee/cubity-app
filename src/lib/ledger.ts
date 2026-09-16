@@ -124,6 +124,13 @@ export function agingFromEntries(entries: LedgerEntry[]) {
   return buckets;
 }
 
+export function promisedToward(client: Pick<Client, "nextPromisedAmount">, outstanding: number) {
+  if (outstanding <= 0) return 0;
+  const amount = client.nextPromisedAmount;
+  if (amount == null || amount <= 0) return outstanding;
+  return Math.min(amount, outstanding);
+}
+
 export function clientStatus(client: ClientWithEntries) {
   const { totalDue, totalPaid, outstanding } = totals(client.entries);
   const lastPayment = sortEntries(client.entries)
@@ -133,8 +140,11 @@ export function clientStatus(client: ClientWithEntries) {
     .filter((entry) => entry.type === "DUE")
     .at(-1);
   const promised = client.nextPromisedDate;
-  const overdue = outstanding > 0 && isDateBeforeToday(promised);
-  const dueToday = outstanding > 0 && promised
+  const open = Math.max(outstanding, 0);
+  const promisedAmount = promised && open > 0 ? promisedToward(client, open) : 0;
+  const promisedPartial = promisedAmount > 0 && promisedAmount < open;
+  const overdue = open > 0 && isDateBeforeToday(promised);
+  const dueToday = open > 0 && promised
     ? daysFromToday(promised) === 0
     : false;
   const credit = outstanding < 0 ? Math.abs(outstanding) : 0;
@@ -142,11 +152,13 @@ export function clientStatus(client: ClientWithEntries) {
   return {
     totalDue,
     totalPaid,
-    outstanding: Math.max(outstanding, 0),
+    outstanding: open,
     credit,
     lastPayment,
     lastDue,
     promised,
+    promisedAmount,
+    promisedPartial,
     overdue,
     dueToday,
     daysOverdue: overdue ? Math.abs(daysFromToday(promised)) : 0,
@@ -212,7 +224,7 @@ export function companySnapshot(clients: ClientWithEntries[]) {
     overdueCount: overdue.length,
     dueTodayAmount: dueToday.reduce((sum, item) => sum + item.status.outstanding, 0),
     dueTodayCount: dueToday.length,
-    upcomingAmount: upcoming.reduce((sum, item) => sum + item.status.outstanding, 0),
+    upcomingAmount: upcoming.reduce((sum, item) => sum + item.status.promisedAmount, 0),
     upcomingCount: upcoming.length,
     collectedThisMonth,
     billedThisMonth,
@@ -230,12 +242,12 @@ export function companySnapshot(clients: ClientWithEntries[]) {
     monthly: monthlySeries(clients, 6),
     mix: {
       overdue: overdue.reduce((sum, item) => sum + item.status.outstanding, 0),
-      upcoming: upcoming.reduce((sum, item) => sum + item.status.outstanding, 0),
+      upcoming: upcoming.reduce((sum, item) => sum + item.status.promisedAmount, 0),
       later: Math.max(
         0,
         withDues.reduce((sum, item) => sum + item.status.outstanding, 0)
           - overdue.reduce((sum, item) => sum + item.status.outstanding, 0)
-          - upcoming.reduce((sum, item) => sum + item.status.outstanding, 0),
+          - upcoming.reduce((sum, item) => sum + item.status.promisedAmount, 0),
       ),
     },
     settledCount: clients.length - withDues.length,

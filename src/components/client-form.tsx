@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/submit-button";
+import { receivables } from "@/lib/routes";
 
 type State = { error?: string } | undefined;
 
@@ -149,7 +150,7 @@ export function ClientForm({ client }: { client?: Client }) {
           className="h-14 w-full text-base sm:w-auto md:h-14"
           asChild
         >
-          <a href={client ? `/clients/${client.id}` : "/clients"}>Cancel</a>
+          <a href={client ? receivables.client(client.id) : receivables.clients}>Cancel</a>
         </Button>
         <SubmitButton className="h-14 w-full text-base sm:min-w-40 sm:w-auto md:h-14">
           {client ? "Save client" : "Create client"}

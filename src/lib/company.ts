@@ -36,3 +36,21 @@ export function companyPhoneLine() {
 export function companyAddressLine() {
   return `${COMPANY.addressLine}, ${COMPANY.city}`;
 }
+
+export type PaymentInstructions = {
+  bkashNumber: string;
+  bankName: string;
+  bankBranch: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankRoutingNumber: string | null;
+};
+
+export const DEFAULT_PAYMENT: PaymentInstructions = {
+  bkashNumber: "01973 914236",
+  bankName: "NRB Bank",
+  bankBranch: "Sylhet Main Branch",
+  bankAccountName: "MD TAREK AHMED",
+  bankAccountNumber: "7087010002828",
+  bankRoutingNumber: "290913794",
+};

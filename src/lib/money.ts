@@ -24,6 +24,12 @@ export function formatMoneyPdf(poisha: number) {
   return `Tk ${formatted}`;
 }
 
+export function poishaToInput(poisha?: number | null) {
+  if (poisha == null || poisha <= 0) return "";
+  const taka = poisha / 100;
+  return Number.isInteger(taka) ? String(taka) : String(taka);
+}
+
 export function formatMoneyCompact(poisha: number) {
   return formatMoney(poisha);
 }

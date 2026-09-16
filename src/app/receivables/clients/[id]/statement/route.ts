@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getClient } from "@/lib/queries";
+import { getClient, getPaymentInstructions } from "@/lib/queries";
 import { buildClientStatementPdf } from "@/lib/pdf";
 
 function clientPdfFilename(name: string) {
@@ -17,7 +17,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const client = await getClient(id);
   if (!client) notFound();
 
-  const pdf = await buildClientStatementPdf(client);
+  const pdf = await buildClientStatementPdf(client, await getPaymentInstructions());
   const filename = clientPdfFilename(client.name);
 
   return new Response(Buffer.from(pdf), {

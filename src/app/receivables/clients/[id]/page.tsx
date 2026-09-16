@@ -11,6 +11,7 @@ import { clientStatus, runningLedger, telHref, whatsappHref } from "@/lib/ledger
 import { paymentMethodLabel } from "@/lib/company";
 import { formatMoney } from "@/lib/money";
 import { getClient } from "@/lib/queries";
+import { receivables } from "@/lib/routes";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,13 +20,21 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   const status = clientStatus(client);
   const ledger = runningLedger(client.entries);
-  const followUp = `Assalamu alaikum ${client.name}, this is Cubity Engineering & Construction. Your outstanding balance is ${formatMoney(status.outstanding)}. — contact.cubity@gmail.com`;
+  const followUp = [
+    `Assalamu alaikum ${client.name}, this is Cubity Engineering & Construction. Your outstanding balance is ${formatMoney(status.outstanding)}.`,
+    status.promised && status.promisedAmount
+      ? `Next promised ${formatMoney(status.promisedAmount)} on ${formatDate(status.promised)}.`
+      : null,
+    "— contact.cubity@gmail.com",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const paidPercent = status.totalDue > 0 ? Math.min(status.totalPaid / status.totalDue, 1) : 0;
 
   return (
     <div className="grid gap-8">
       <div>
-        <Link href="/clients" className="text-sm font-medium text-primary">
+        <Link href={receivables.clients} className="text-sm font-medium text-primary">
           Clients
         </Link>
         <div className="mt-4 flex items-start justify-between gap-4">
@@ -45,7 +54,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
           <Link
-            href={`/clients/${client.id}/edit`}
+            href={receivables.clientEdit(client.id)}
             className="grid size-12 shrink-0 place-items-center rounded-full bg-white ring-1 ring-border"
           >
             <Pencil className="size-4" />
@@ -72,12 +81,12 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <div className="grid grid-cols-2 gap-3">
         <Action href={telHref(client.phone)} icon={<Phone className="size-5" />} label="Call" />
         <Action href={whatsappHref(client.phone, followUp)} icon={<MessageCircle className="size-5" />} label="WhatsApp" external />
-        <Action href={`/clients/${client.id}/due`} icon={<Plus className="size-5" />} label="Add due" primary />
-        <Action href={`/clients/${client.id}/pay`} icon={<Wallet className="size-5" />} label="Log payment" />
+        <Action href={receivables.clientDue(client.id)} icon={<Plus className="size-5" />} label="Add due" primary />
+        <Action href={receivables.clientPay(client.id)} icon={<Wallet className="size-5" />} label="Log payment" />
       </div>
 
       <PdfDownload
-        href={`/clients/${client.id}/statement`}
+        href={receivables.clientStatement(client.id)}
         title="Download due statement?"
         description={`This saves ${client.name}'s ledger as a PDF on this device.`}
         className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold ring-1 ring-border"
@@ -88,14 +97,26 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
         <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-          Promised pay date
+          Next promise
         </p>
         <p className="mt-3 text-2xl font-semibold tracking-tight">
           {status.promised ? formatDate(status.promised) : "Not set"}
         </p>
+        {status.promised && status.outstanding > 0 ? (
+          <p className="mt-2 text-base text-muted-foreground">
+            {status.promisedPartial
+              ? `${formatMoney(status.promisedAmount)} of ${formatMoney(status.outstanding)}`
+              : formatMoney(status.promisedAmount)}
+          </p>
+        ) : null}
         {status.outstanding > 0 ? (
           <div className="mt-5">
-            <PromisedDateForm clientId={client.id} promisedDate={client.nextPromisedDate} />
+            <PromisedDateForm
+              clientId={client.id}
+              promisedDate={client.nextPromisedDate}
+              promisedAmount={client.nextPromisedAmount}
+              outstanding={status.outstanding}
+            />
           </div>
         ) : (
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">No remaining due.</p>
@@ -128,6 +149,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     {line.entry.promisedDate ? (
                       <p className="mt-1 text-sm text-muted-foreground">
                         Remaining promised {formatDate(line.entry.promisedDate)}
+                        {line.entry.promisedAmount
+                          ? ` · ${formatMoney(line.entry.promisedAmount)}`
+                          : ""}
                       </p>
                     ) : null}
                   </div>

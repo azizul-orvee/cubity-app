@@ -14,6 +14,7 @@ import { DueStatusBadge } from "@/components/due-status-badge";
 import { clientStatus } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
 import { getClients } from "@/lib/queries";
+import { receivables } from "@/lib/routes";
 
 const filters = [
   { value: "all", label: "All" },
@@ -90,7 +91,7 @@ export default async function ClientsPage({
           {filters.map((item) => (
             <Link
               key={item.value}
-              href={`/clients?filter=${item.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+              href={receivables.clientsList(item.value, q)}
               className={
                 filter === item.value
                   ? "inline-flex min-h-11 shrink-0 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
@@ -119,7 +120,7 @@ export default async function ClientsPage({
           {clients.length === 0 ? (
             <EmptyContent>
               <Button asChild>
-                <Link href="/clients/new">Add client</Link>
+                <Link href={receivables.clientsNew}>Add client</Link>
               </Button>
             </EmptyContent>
           ) : null}
@@ -129,7 +130,7 @@ export default async function ClientsPage({
           {rows.map(({ client, status }, index) => (
             <Link
               key={client.id}
-              href={`/clients/${client.id}`}
+              href={receivables.client(client.id)}
               className="flex items-start gap-4 rounded-[1.5rem] bg-white px-5 py-5 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
             >
               <span
