@@ -84,7 +84,7 @@ Opening Clients (or a client account) from Home shows the **Cubity seal appearin
 
 ### PDFs
 
-- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised, a gap before the ledger, **Pending** column, and outstanding amounts in red. Footer uses location, phone, and email icons.
+- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised, a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long so they do not run into Due. Footer uses location, phone, and email icons.
 - Company **outstanding receivables** list with office address and phones
 - Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
@@ -157,6 +157,7 @@ Cursor always applies:
 
 ## Changelog
 
+- 2026-09-16 — Wrapped long Particulars onto two lines on the client due-statement PDF and moved Due right so the text no longer runs into the amount columns.
 - 2026-09-16 — Replaced the busy survey-stamp loader with three quieter Cubity-seal appearances (paint-in, bloom, rise), picked at random each time Clients or a client account loads.
 - 2026-09-16 — Added a Cubity-logo survey-stamp loader while Clients (and client accounts) load from the database, and a confirm dialog before any PDF download. Both work on the website and in the Android app without a new APK.
 - 2026-09-16 — Opened up the clients list and client account pages with more space, quieter type, and larger tap targets. The add-client form now lifts above the Android keyboard so Address stays visible.

@@ -93,8 +93,17 @@ function drawTracked(
   }
 }
 
-function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
-  const words = text.split(/\s+/);
+function fitLine(text: string, font: PDFFont, size: number, maxWidth: number) {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+  let cut = text.trimEnd();
+  while (cut.length && font.widthOfTextAtSize(`${cut}…`, size) > maxWidth) {
+    cut = cut.slice(0, -1).trimEnd();
+  }
+  return cut ? `${cut}…` : "…";
+}
+
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number, maxLines = Infinity) {
+  const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
   for (const word of words) {
@@ -107,7 +116,41 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
     }
   }
   if (current) lines.push(current);
-  return lines;
+
+  const fitted = lines.map((line) => fitLine(line, font, size, maxWidth));
+  if (fitted.length <= maxLines) return fitted;
+
+  const kept = fitted.slice(0, maxLines);
+  kept[maxLines - 1] = fitLine(`${kept[maxLines - 1].replace(/…$/, "")}…`, font, size, maxWidth);
+  return kept;
+}
+
+function wrapParticulars(text: string, font: PDFFont, size: number, maxWidth: number) {
+  const segments = text.split(" · ").map((part) => part.trim()).filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+  for (const segment of segments) {
+    const next = current ? `${current} · ${segment}` : segment;
+    if (current && font.widthOfTextAtSize(next, size) > maxWidth) {
+      lines.push(current);
+      const leftover = wrapText(segment, font, size, maxWidth);
+      current = leftover[0] ?? "";
+      lines.push(...leftover.slice(1));
+    } else if (!current && font.widthOfTextAtSize(segment, size) > maxWidth) {
+      const leftover = wrapText(segment, font, size, maxWidth);
+      lines.push(...leftover.slice(0, -1));
+      current = leftover.at(-1) ?? "";
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+
+  const fitted = lines.map((line) => fitLine(line, font, size, maxWidth));
+  if (fitted.length <= 2) return fitted;
+  const kept = fitted.slice(0, 2);
+  kept[1] = fitLine(`${kept[1].replace(/…$/, "")}…`, font, size, maxWidth);
+  return kept;
 }
 
 function drawStrokeIcon(page: PDFPage, path: string, x: number, y: number, size: number, color: RGB) {
@@ -334,10 +377,12 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
   const cols = {
     date: MARGIN,
     details: 122,
-    due: 388,
+    due: 404,
     paid: 462,
     pending: width - MARGIN - CELL_PAD,
   };
+  const particularsWidth =
+    cols.due - regular.widthOfTextAtSize("Tk 99,99,999", 9) - 12 - cols.details;
 
   function headerRow(currentPage: PDFPage, headerY: number) {
     currentPage.drawRectangle({
@@ -380,8 +425,8 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
       line.entry.note,
       line.entry.promisedDate ? `Balance promised ${formatDate(line.entry.promisedDate)}` : null,
     ].filter(Boolean);
-    const wrapped = wrapText(detailParts.join("  ·  "), regular, 9, 236);
-    const rowHeight = 18 + Math.max(0, wrapped.length - 1) * 12;
+    const wrapped = wrapParticulars(detailParts.join(" · "), regular, 9, particularsWidth);
+    const rowHeight = 22 + Math.max(0, wrapped.length - 1) * 13;
 
     if (y - rowHeight < 128) {
       page = pdf.addPage([PAGE.width, PAGE.height]);
