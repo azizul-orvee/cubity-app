@@ -377,12 +377,11 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
   const cols = {
     date: MARGIN,
     details: 122,
-    due: 404,
-    paid: 462,
-    pending: width - MARGIN - CELL_PAD,
+    due: 348,
+    paid: 422,
+    pending: 496,
   };
-  const particularsWidth =
-    cols.due - regular.widthOfTextAtSize("Tk 99,99,999", 9) - 12 - cols.details;
+  const particularsWidth = cols.due - 10 - cols.details;
 
   function headerRow(currentPage: PDFPage, headerY: number) {
     currentPage.drawRectangle({
@@ -406,9 +405,27 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
       font: bold,
       color: WHITE,
     });
-    drawRight(currentPage, "Due", cols.due, headerY, bold, 9, WHITE);
-    drawRight(currentPage, "Paid", cols.paid, headerY, bold, 9, WHITE);
-    drawRight(currentPage, "Pending", cols.pending, headerY, bold, 9, WHITE);
+    currentPage.drawText("Due", {
+      x: cols.due,
+      y: headerY,
+      size: 9,
+      font: bold,
+      color: WHITE,
+    });
+    currentPage.drawText("Paid", {
+      x: cols.paid,
+      y: headerY,
+      size: 9,
+      font: bold,
+      color: WHITE,
+    });
+    currentPage.drawText("Pending", {
+      x: cols.pending,
+      y: headerY,
+      size: 9,
+      font: bold,
+      color: WHITE,
+    });
   }
 
   headerRow(page, y);
@@ -448,9 +465,9 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
 
     drawText(page, formatDate(line.entry.date), cols.date + CELL_PAD, y, regular, 9, INK);
     drawText(page, wrapped[0] ?? "", cols.details, y, regular, 9, MUTED);
-    drawRight(page, line.due ? formatMoneyPdf(line.due) : "—", cols.due, y, regular, 9, INK);
-    drawRight(page, line.paid ? formatMoneyPdf(line.paid) : "—", cols.paid, y, regular, 9, INK);
-    drawRight(page, formatMoneyPdf(line.balance), cols.pending, y, bold, 9, INK);
+    drawText(page, line.due ? formatMoneyPdf(line.due) : "—", cols.due, y, regular, 9, INK);
+    drawText(page, line.paid ? formatMoneyPdf(line.paid) : "—", cols.paid, y, regular, 9, INK);
+    drawText(page, formatMoneyPdf(line.balance), cols.pending, y, bold, 9, INK);
 
     let extraY = y - 13;
     for (const extra of wrapped.slice(1)) {
@@ -468,8 +485,8 @@ export async function buildClientStatementPdf(client: ClientWithEntries) {
     color: HAIR,
   });
   y -= 18;
-  drawRight(page, "Amount still pending", cols.paid, y, regular, 10, MUTED);
-  drawRight(page, formatMoneyPdf(status.outstanding), cols.pending, y, bold, 13, RED);
+  drawRight(page, "Amount still pending", cols.pending - 8, y, regular, 10, MUTED);
+  drawText(page, formatMoneyPdf(status.outstanding), cols.pending, y, bold, 13, RED);
 
   y -= 32;
   if (client.notes) {
