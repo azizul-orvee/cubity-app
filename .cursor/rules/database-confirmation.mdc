@@ -1,0 +1,31 @@
+---
+description: Never change the database unless the user confirms in this conversation
+alwaysApply: true
+---
+
+# Database needs confirmation
+
+Local dev uses the production Neon database. A write from this machine changes live Cubity data.
+
+Never change database data or schema unless the user clearly agreed **in the current message**.
+
+## Counts as a change
+
+- `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, or any Prisma write (`create`, `update`, `delete`, `upsert`, `updateMany`, `deleteMany`)
+- `prisma migrate`, `prisma db push`, `prisma db execute`, or SQL that alters tables
+- Seed scripts, one-off scripts, or server actions that write clients, dues, payments, or payment settings
+- Editing rows in Prisma Studio or any database GUI
+
+## Still allowed without asking
+
+- Reading data (`findMany`, `SELECT`, opening a screen)
+- Editing application code that would write later, without running that write
+- `prisma generate`
+
+## Confirmation required
+
+Treat these as permission: "yes, change the database", "add this client", "run the migration", "delete that row".
+
+If they only say "fix the screen", "looks good", or "commit", **ask first**. Do not infer yes.
+
+Stop and ask: "This writes to the live database. Should I go ahead?"

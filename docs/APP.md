@@ -44,7 +44,7 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/clients/[id]/edit` | Edit profile (accountant only) |
 | `/receivables/clients/[id]/due` | Add a due / site visit (accountant only) |
 | `/receivables/clients/[id]/pay` | Log a payment (accountant only) |
-| `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim.pdf`), including bKash and bank payment details |
+| `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim-due-statement.pdf`), including bKash and bank payment details |
 | `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
 | `/invoices` | Invoice maker placeholder until that product is built |
@@ -80,7 +80,7 @@ The chosen role is stored in an httpOnly cookie for 30 days. Click Receivables o
 - Required: name, phone
 - Optional on add: email, address
 - Company, site/project, and notes can be filled later on edit
-- Call (`tel:`) and WhatsApp links on the profile (Bangladesh `01…` numbers are sent as `880…`)
+- Call (`tel:`) on the profile. WhatsApp attaches that client's due-statement PDF and sends no text. Bangladesh `01…` numbers open that contact's chat.
 
 ### Dues and payments
 
@@ -125,7 +125,7 @@ These exist because construction collections usually fail on follow-up, not on t
 
 - Overdue and upcoming-promise queues
 - Aging buckets so old money is obvious
-- Call / WhatsApp from the profile
+- Call from the profile, and WhatsApp with the due-statement PDF attached and no text
 - Site/project on the client
 - Payment method tracking
 - Company-wide PDF
@@ -153,7 +153,7 @@ Local: copy `.env.example` to `.env` / `.env.local` and paste your Neon URLs. `n
 
 ## Android APK
 
-There is a native-looking Android wrapper in `android/`. It is a fullscreen WebView of the live site with a **fixed teal status bar**, Cubity splash and icon, and no Chrome address bar. The page cannot pan sideways. Call / WhatsApp open the real phone apps. PDF statements go to Downloads.
+There is a native-looking Android wrapper in `android/`. It is a fullscreen WebView of the live site with a **fixed teal status bar**, Cubity splash and icon, and no Chrome address bar. The page cannot pan sideways. Call opens the phone app. WhatsApp opens with the client's due-statement PDF attached and no message. PDF downloads go to Downloads. The WhatsApp attachment needs a new `dist/Cubity.apk` (the shell gained a share bridge). Screens and the new filename still update from the website without a new APK.
 
 The built file is **`dist/Cubity.apk`** (install from Files / a share; allow unknown sources). Needs internet. It is not on Play Store.
 
@@ -185,6 +185,7 @@ Cursor always applies:
 
 - Update this file whenever the app changes
 - Never `git commit` or `git push` unless you confirm in chat
+- Never change the database unless you confirm in chat. Local `.env` points at the production Neon database, so a local write is a live write. The same instruction is in `AGENTS.md` for assistants outside Cursor.
 
 When editing receivables (`src/app/receivables/`, `src/lib/routes.ts`, roles, money, `AppShell`):
 
@@ -197,6 +198,8 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 ## Changelog
 
+- 2026-09-25 — Named client due statements `Name-due-statement.pdf`. The WhatsApp button now attaches that PDF only, with no text. The Android app needs a new APK so WhatsApp opens with the file.
+- 2026-09-25 — Told every assistant not to change the database unless you confirm first. Local dev uses the production Neon database.
 - 2026-09-25 — Kept Overdue and Coming up amounts and status badges inside the card on the phone. Long client names now truncate instead of pushing the money off the right edge.
 - 2026-09-25 — Fixed the Vercel build. Delete, promised-date, and payment-settings actions were returning a type the form actions cannot use, so the production deploy failed typechecking.
 - 2026-09-25 — Stopped the receivables dashboard from sitting too far right on the phone. The billed-vs-collected chart was forcing the page wider than the screen, so the right margin was clipped.

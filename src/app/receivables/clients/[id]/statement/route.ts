@@ -9,7 +9,7 @@ function clientPdfFilename(name: string) {
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join("-");
-  return `${slug || "Client"}.pdf`;
+  return `${slug || "Client"}-due-statement.pdf`;
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {

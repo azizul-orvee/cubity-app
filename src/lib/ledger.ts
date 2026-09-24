@@ -279,14 +279,6 @@ export function monthlySeries(clients: ClientWithEntries[], months = 6) {
   return buckets;
 }
 
-export function whatsappHref(phone: string, message?: string) {
-  let digits = phone.replace(/[^\d]/g, "");
-  if (digits.startsWith("0")) digits = `880${digits.slice(1)}`;
-  else if (digits.length === 10) digits = `880${digits}`;
-  const text = message ? `?text=${encodeURIComponent(message)}` : "";
-  return `https://wa.me/${digits}${text}`;
-}
-
 export function telHref(phone: string) {
   return `tel:${phone.replace(/\s+/g, "")}`;
 }

@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         })
         webView.webViewClient = CubityClient()
         webView.webChromeClient = CubityChromeClient()
+        webView.addJavascriptInterface(CubityBridge(this), "CubityAndroid")
 
         onBackPressedDispatcher.addCallback(
             this,
