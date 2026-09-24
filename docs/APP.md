@@ -197,6 +197,7 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 ## Changelog
 
+- 2026-09-25 — Kept Overdue and Coming up amounts and status badges inside the card on the phone. Long client names now truncate instead of pushing the money off the right edge.
 - 2026-09-25 — Fixed the Vercel build. Delete, promised-date, and payment-settings actions were returning a type the form actions cannot use, so the production deploy failed typechecking.
 - 2026-09-25 — Stopped the receivables dashboard from sitting too far right on the phone. The billed-vs-collected chart was forcing the page wider than the screen, so the right margin was clipped.
 - 2026-09-19 — Added a receivables Cursor rule (roles, Tk, path helpers, mobile-first) and an add-product skill so new workspace tools get an `src/app/` folder, `routes.ts` helpers, a hub card, and an APP.md update.

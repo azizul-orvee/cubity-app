@@ -181,7 +181,7 @@ export default async function HomePage() {
         />
       </section>
 
-      <section className="grid gap-4">
+      <section className="grid min-w-0 gap-4">
         <QueueCard
           title="Overdue"
           empty="Nothing overdue. Keep logging promised dates."
@@ -256,7 +256,7 @@ function QueueCard({
   }[];
 }) {
   return (
-    <section className="rounded-3xl bg-white p-4 ring-1 ring-border">
+    <section className="min-w-0 overflow-hidden rounded-3xl bg-white p-4 ring-1 ring-border">
       <div className="mb-3 flex items-center gap-2">
         <span
           className={
@@ -277,14 +277,14 @@ function QueueCard({
             <Link
               key={row.id}
               href={row.href}
-              className="flex min-h-14 items-center justify-between gap-3 rounded-2xl bg-muted/50 px-3 py-2"
+              className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted/50 px-3 py-2"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{row.title}</p>
-                <p className="text-xs text-muted-foreground">{row.meta}</p>
+                <p className="truncate text-xs text-muted-foreground">{row.meta}</p>
               </div>
-              <div className="text-right">
-                <p className="font-semibold">{formatMoney(row.amount)}</p>
+              <div className="shrink-0 text-right">
+                <p className="font-semibold tabular-nums">{formatMoney(row.amount)}</p>
                 <DueStatusBadge status={row.status} />
               </div>
             </Link>
