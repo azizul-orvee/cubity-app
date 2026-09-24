@@ -9,7 +9,7 @@ import { totals } from "@/lib/ledger";
 import { parseAmountToPoisha } from "@/lib/money";
 import { DEFAULT_PAYMENT } from "@/lib/company";
 import { receivables } from "@/lib/routes";
-import { requireAccountant } from "@/lib/workspace-role";
+import { redirectUnlessAccountant, requireAccountant } from "@/lib/workspace-role";
 
 const optionalText = z
   .string()
@@ -107,8 +107,7 @@ export async function updateClient(clientId: string, formData: FormData) {
 }
 
 export async function deleteClient(clientId: string) {
-  const denied = await requireAccountant();
-  if (denied) return denied;
+  await redirectUnlessAccountant();
 
   await prisma.client.delete({ where: { id: clientId } });
   revalidateClient();
@@ -257,8 +256,7 @@ export async function recordPayment(clientId: string, formData: FormData) {
 }
 
 export async function updatePromisedDate(clientId: string, formData: FormData) {
-  const denied = await requireAccountant();
-  if (denied) return denied;
+  await redirectUnlessAccountant();
 
   const promisedDate = parseDateInput(formString(formData, "promisedDate"));
   const client = await prisma.client.findUnique({
@@ -304,7 +302,9 @@ const paymentSchema = z.object({
   bankRoutingNumber: optionalText,
 });
 
-export async function updatePaymentInstructions(formData: FormData) {
+export async function updatePaymentInstructions(
+  formData: FormData,
+): Promise<{ error?: string; ok?: boolean }> {
   const denied = await requireAccountant();
   if (denied) return denied;
 
@@ -333,8 +333,7 @@ export async function updatePaymentInstructions(formData: FormData) {
 }
 
 export async function deleteEntry(entryId: string, clientId: string) {
-  const denied = await requireAccountant();
-  if (denied) return denied;
+  await redirectUnlessAccountant(receivables.client(clientId));
 
   await prisma.ledgerEntry.delete({ where: { id: entryId } });
 
