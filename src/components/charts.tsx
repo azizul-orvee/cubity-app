@@ -146,7 +146,7 @@ export function DualLineChart({
     : "";
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-44 w-full">
+    <svg viewBox={`0 0 ${width} ${height}`} className="block h-44 w-full min-w-0 max-w-full">
       <defs>
         <linearGradient id="collectFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#2EC4B6" stopOpacity="0.35" />

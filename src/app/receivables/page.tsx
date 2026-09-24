@@ -41,7 +41,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="grid gap-5">
+    <div className="grid min-w-0 gap-5 [&>*]:min-w-0">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">

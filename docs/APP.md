@@ -197,6 +197,7 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 ## Changelog
 
+- 2026-09-25 — Stopped the receivables dashboard from sitting too far right on the phone. The billed-vs-collected chart was forcing the page wider than the screen, so the right margin was clipped.
 - 2026-09-19 — Added a receivables Cursor rule (roles, Tk, path helpers, mobile-first) and an add-product skill so new workspace tools get an `src/app/` folder, `routes.ts` helpers, a hub card, and an APP.md update.
 - 2026-09-18 — Added an Accountant / Engineer popup when opening Receivables. Accountants unlock with a password stored in code; engineers get a view-only app with add, edit, and delete hidden and blocked on the server.
 
