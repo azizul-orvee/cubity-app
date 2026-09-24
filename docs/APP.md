@@ -71,7 +71,7 @@ Clicking Receivables on the hub (or opening `/receivables` with no role yet) sho
 - **Accountant** — password required, then full add/edit access
 - **Engineer** — no password, view-only
 
-The chosen role is stored in an httpOnly cookie for 30 days. Click Receivables on the hub again to switch. Server actions and add/edit routes reject engineers even if they hit the URL directly.
+The chosen role stays in an httpOnly cookie until you tap **Log out** in the Receivables header. Opening Receivables again goes straight in and does not ask for the password. Server actions and add/edit routes reject engineers even if they hit the URL directly.
 
 ## Features
 
@@ -198,6 +198,7 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 ## Changelog
 
+- 2026-09-25 — Kept the accountant signed in until they tap Log out. Opening Receivables again no longer asks for the password.
 - 2026-09-25 — Stopped holding every screen for 1.4 seconds behind the Cubity seal, and run Receivables in Singapore next to the database so pages wait on a shorter query.
 - 2026-09-25 — WhatsApp on a client opens the chat with only "Assalamualaikum". The long follow-up text and the PDF attachment attempt are gone.
 - 2026-09-25 — Named client due statements `Name-due-statement.pdf`.

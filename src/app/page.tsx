@@ -5,6 +5,7 @@ import { RoleGate } from "@/components/role-gate";
 import { SiteChrome } from "@/components/site-chrome";
 import { COMPANY } from "@/lib/company";
 import { invoices, receivables } from "@/lib/routes";
+import { getWorkspaceRole } from "@/lib/workspace-role";
 
 export const metadata: Metadata = {
   title: "Workspace",
@@ -27,7 +28,8 @@ const products = [
   },
 ] as const;
 
-export default function HubPage() {
+export default async function HubPage() {
+  const role = await getWorkspaceRole();
   return (
     <SiteChrome>
       <div className="mx-auto grid max-w-lg gap-8 md:max-w-3xl">
@@ -61,7 +63,7 @@ export default function HubPage() {
             const cardClass =
               "w-full rounded-[1.75rem] bg-white p-6 text-left ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]";
 
-            if (product.ready) {
+            if (product.ready && !role) {
               return (
                 <RoleGate key={product.href}>
                   <button type="button" className={cardClass}>

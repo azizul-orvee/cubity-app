@@ -55,7 +55,19 @@ export async function setWorkspaceRole(role: WorkspaceRole) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * 400,
+  });
+}
+
+export async function clearWorkspaceRole() {
+  (await cookies()).set({
+    name: COOKIE,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
   });
 }
 

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PdfDownload } from "@/components/pdf-download";
+import { logOut } from "@/lib/role-actions";
 import { hubPath, isReceivablesFormPath, receivables } from "@/lib/routes";
 
 const tabs = [
@@ -64,6 +65,14 @@ export function AppShell({
             ))}
           </nav>
           <div className="flex items-center gap-1">
+            <form action={logOut}>
+              <button
+                type="submit"
+                className="min-h-11 px-2 text-sm font-medium text-muted-foreground"
+              >
+                Log out
+              </button>
+            </form>
             {canEdit ? (
               <>
                 <Button

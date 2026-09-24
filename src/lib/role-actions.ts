@@ -3,9 +3,10 @@
 import { redirect } from "next/navigation";
 import {
   accountantPasswordMatches,
+  clearWorkspaceRole,
   setWorkspaceRole,
 } from "@/lib/workspace-role";
-import { receivables } from "@/lib/routes";
+import { hubPath, receivables } from "@/lib/routes";
 
 export async function enterAsEngineer() {
   await setWorkspaceRole("engineer");
@@ -19,4 +20,9 @@ export async function enterAsAccountant(formData: FormData) {
   }
   await setWorkspaceRole("accountant");
   redirect(receivables.root);
+}
+
+export async function logOut() {
+  await clearWorkspaceRole();
+  redirect(hubPath);
 }
