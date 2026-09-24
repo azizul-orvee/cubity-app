@@ -9,6 +9,7 @@ export const getInvoices = cache(async () => {
       number: true,
       clientName: true,
       issueDate: true,
+      createdAt: true,
       paidAmount: true,
       lines: { select: { amount: true } },
     },

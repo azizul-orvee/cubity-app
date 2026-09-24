@@ -47,11 +47,11 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim-due-statement.pdf`), including bKash and bank payment details |
 | `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
-| `/invoices` | Still-due card (paid of billed, open invoices, collected), search by client or invoice number, filter chips (All / Unpaid / Partly paid / Paid). Bottom nav: Invoices, Services, and New. No accountant gate. |
-| `/invoices/new` | New invoice in cards: Bill to (client, optional phone, project, address, date), Services (tap to pick, amount box opens), Payment (paid now with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button |
-| `/invoices/[id]` | Invoice detail laid out like a Receivables client: amount due card, Call and WhatsApp when a phone is saved, Download invoice PDF, services with billed / paid / still due, client details, edit, delete. Delete asks for confirmation first |
-| `/invoices/[id]/edit` | Change the client or the selected services and amounts |
-| `/invoices/[id]/pdf` | Download that invoice PDF (file named like `Client-Name-INV-0001-invoice.pdf`) |
+| `/invoices` | Every invoice, newest first, grouped by the day it was created (Today, Yesterday, then the date). Search by client or invoice number. Bottom nav: Invoices, Services, and New. No accountant gate. |
+| `/invoices/new` | New invoice in cards: Invoice (required invoice ID, issue date), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (paid now with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills it from another invoice (ID left blank, paid resets, date is today) and saves as a new invoice |
+| `/invoices/[id]` | The invoice shown like the PDF (letterhead, billed to, amount due, particulars, totals, notes, payment instructions, office footer). Buttons: Edit, New from this, Download. Delete sits below and asks for confirmation first |
+| `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts |
+| `/invoices/[id]/pdf` | Download that invoice PDF, named after its invoice ID (e.g. `CUB-2026-014.pdf`). The ID is printed under INVOICE in the letterhead |
 | `/invoices/services` | Add a service at the top, then rename or remove each one in the list (remove shows Undo). The list stays on this phone. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
@@ -221,6 +221,8 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-25 — Invoice ID is now typed in (required, unique, capital letters / numbers / hyphens, e.g. CUB-2026-014) instead of auto-numbered. It names the PDF file and is printed as "Invoice ID" in the PDF letterhead.
+- 2026-09-25 — Invoice list now only lists invoices grouped by the day they were created (no totals card or filters). Invoice detail shows the invoice like the PDF, with Edit, New from this, and Download; Call and WhatsApp were removed.
 - 2026-09-25 — Restyled the invoice maker to match Receivables: same teal cards, avatars, badges, and bottom nav, plus search, filters, a sticky due bar, and quick paid amounts. No change to data, validation, or the PDF.
 - 2026-09-25 — Asked for confirmation before deleting an invoice, and showed the Cubity seal on invoice screens only while the database query is still running.
 - 2026-09-25 — Invoice amounts and paid amounts accept whole numbers only. Letters and fractions are rejected.

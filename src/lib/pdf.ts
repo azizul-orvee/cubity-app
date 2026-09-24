@@ -838,7 +838,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     logo,
     { regular, bold },
     "INVOICE",
-    `${invoice.number}  ·  Issued ${format(invoice.issueDate, "dd MMMM yyyy")}`,
+    `Invoice ID: ${invoice.number}  ·  Issued ${format(invoice.issueDate, "dd MMMM yyyy")}`,
   );
 
   drawText(page, "BILLED TO", MARGIN, y, regular, 8, MUTED);

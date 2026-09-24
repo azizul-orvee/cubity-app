@@ -38,6 +38,9 @@ export const invoices = {
   root: INVOICES,
   services: `${INVOICES}/services`,
   new: `${INVOICES}/new`,
+  newFrom(id: string) {
+    return `${INVOICES}/new?from=${encodeURIComponent(id)}`;
+  },
   invoice(id: string) {
     return `${INVOICES}/${id}`;
   },

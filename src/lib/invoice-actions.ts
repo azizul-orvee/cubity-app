@@ -56,11 +56,17 @@ function readLines(formData: FormData) {
   return { lines };
 }
 
-async function nextInvoiceNumber() {
-  const latest = await prisma.invoice.findFirst({ orderBy: { createdAt: "desc" }, select: { number: true } });
-  const current = Number.parseInt(latest?.number.replace(/\D/g, "") ?? "0", 10);
-  const next = Number.isFinite(current) ? current + 1 : 1;
-  return `INV-${String(next).padStart(4, "0")}`;
+/** Invoice ID: capital letters and numbers, optionally joined by single hyphens, e.g. CUB-2026-014. */
+const INVOICE_ID = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
+
+function readInvoiceId(formData: FormData) {
+  const number = formString(formData, "number").trim().toUpperCase();
+  if (!number) return { error: "Enter an invoice ID." };
+  if (number.length > 40) return { error: "Invoice ID is too long. Keep it under 40 characters." };
+  if (!INVOICE_ID.test(number)) {
+    return { error: "Invoice ID can only use capital letters, numbers, and hyphens, like CUB-2026-014." };
+  }
+  return { number };
 }
 
 export async function saveInvoice(invoiceId: string | null, formData: FormData) {
@@ -74,6 +80,10 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the invoice." };
   }
+
+  const id = readInvoiceId(formData);
+  if ("error" in id) return id;
+  const { number } = id;
 
   const issueDate = parseDateInput(formString(formData, "issueDate"));
   if (!issueDate) return { error: "Choose an issue date." };
@@ -90,6 +100,9 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   if (paidAmount == null) return { error: "Enter a valid paid amount." };
   if (paidAmount > billed) return { error: "Paid amount is higher than the invoice total." };
 
+  const taken = await prisma.invoice.findUnique({ where: { number }, select: { id: true } });
+  if (taken && taken.id !== invoiceId) return { error: `Invoice ID ${number} is already used by another invoice.` };
+
   if (invoiceId) {
     const existing = await prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true } });
     if (!existing) return { error: "That invoice is no longer here." };
@@ -97,7 +110,7 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
       prisma.invoiceLine.deleteMany({ where: { invoiceId } }),
       prisma.invoice.update({
         where: { id: invoiceId },
-        data: { ...parsed.data, issueDate, paidAmount, lines: { create: lines } },
+        data: { ...parsed.data, number, issueDate, paidAmount, lines: { create: lines } },
       }),
     ]);
     revalidateInvoices(invoiceId);
@@ -106,7 +119,7 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
 
   const created = await prisma.invoice.create({
     data: {
-      number: await nextInvoiceNumber(),
+      number,
       ...parsed.data,
       issueDate,
       paidAmount,

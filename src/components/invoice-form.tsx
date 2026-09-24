@@ -24,6 +24,10 @@ function digitsOnly(value: string) {
   return whole.replace(/\D/g, "");
 }
 
+function cleanInvoiceId(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+}
+
 function revealField(event: FocusEvent<HTMLElement>) {
   window.setTimeout(() => {
     event.target.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -49,26 +53,31 @@ function Optional() {
   return <span className="font-normal text-muted-foreground">(optional)</span>;
 }
 
-export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceLine[] } }) {
+type InvoiceWithLines = Invoice & { lines: InvoiceLine[] };
+
+/** `invoice` edits that invoice. `template` only pre-fills a new invoice from another one. */
+export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines; template?: InvoiceWithLines }) {
+  const source = invoice ?? template;
   const [services, setServices] = useState<CatalogService[]>([]);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [justSelected, setJustSelected] = useState<string | null>(null);
   const [paid, setPaid] = useState(invoice ? poishaToInput(invoice.paidAmount) : "");
+  const [invoiceId, setInvoiceId] = useState(invoice?.number ?? "");
 
   useEffect(() => {
     const catalog = loadInvoiceServices();
     const known = new Set(catalog.map((service) => service.name));
-    const extras = (invoice?.lines ?? [])
+    const extras = (source?.lines ?? [])
       .filter((line) => !known.has(line.serviceName))
       .map((line) => ({ id: `line-${line.id}`, name: line.serviceName }));
     const next = [...catalog, ...extras];
     setServices(next);
-    if (!invoice) return;
+    if (!source) return;
     const selectedIds: string[] = [];
     const nextAmounts: Record<string, string> = {};
-    for (const line of invoice.lines) {
+    for (const line of source.lines) {
       const match = next.find((service) => service.name === line.serviceName);
       const key = match?.id ?? line.serviceName;
       selectedIds.push(key);
@@ -76,7 +85,7 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
     }
     setSelected(selectedIds);
     setAmounts(nextAmounts);
-  }, [invoice]);
+  }, [source]);
   const bound = saveInvoice.bind(null, invoice?.id ?? null);
   const [state, formAction] = useActionState(async (_prev: State, formData: FormData) => {
     return bound(formData);
@@ -105,6 +114,47 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-5">
+      <Section title="Invoice" hint="The invoice ID is printed on the PDF and used as its file name.">
+        <div className="grid gap-2.5">
+          <Label htmlFor="number" className="text-base">
+            Invoice ID
+          </Label>
+          <Input
+            id="number"
+            name="number"
+            required
+            autoCapitalize="characters"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
+            maxLength={40}
+            pattern="[A-Z0-9]+(-[A-Z0-9]+)*"
+            title="Capital letters, numbers, and hyphens, like CUB-2026-014"
+            placeholder="e.g. CUB-2026-014"
+            value={invoiceId}
+            onChange={(event) => setInvoiceId(cleanInvoiceId(event.target.value))}
+            className={cn(fieldClass, "font-semibold tracking-wide")}
+            onFocus={revealField}
+          />
+          <p className="text-sm text-muted-foreground">Capital letters, numbers, and hyphens only.</p>
+        </div>
+        <div className="grid gap-2.5">
+          <Label htmlFor="issueDate" className="text-base">
+            Issue date
+          </Label>
+          <Input
+            id="issueDate"
+            name="issueDate"
+            type="date"
+            required
+            defaultValue={invoice ? toInputValue(invoice.issueDate) : todayInputValue()}
+            className={fieldClass}
+            onFocus={revealField}
+          />
+        </div>
+      </Section>
+
       <Section title="Bill to" hint="Who the invoice is for.">
         <div className="grid gap-2.5">
           <Label htmlFor="clientName" className="text-base">
@@ -116,7 +166,7 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
             required
             autoCapitalize="words"
             enterKeyHint="next"
-            defaultValue={invoice?.clientName}
+            defaultValue={source?.clientName}
             placeholder="Client or company name"
             className={fieldClass}
             onFocus={revealField}
@@ -132,7 +182,7 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
             type="tel"
             inputMode="tel"
             enterKeyHint="next"
-            defaultValue={invoice?.clientPhone ?? ""}
+            defaultValue={source?.clientPhone ?? ""}
             placeholder="01XXXXXXXXX"
             className={fieldClass}
             onFocus={revealField}
@@ -146,7 +196,7 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
             id="projectName"
             name="projectName"
             enterKeyHint="next"
-            defaultValue={invoice?.projectName ?? ""}
+            defaultValue={source?.projectName ?? ""}
             placeholder="e.g. Chowhatta residence"
             className={fieldClass}
             onFocus={revealField}
@@ -159,22 +209,8 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
           <Input
             id="clientAddress"
             name="clientAddress"
-            defaultValue={invoice?.clientAddress ?? ""}
+            defaultValue={source?.clientAddress ?? ""}
             placeholder="House, road, area"
-            className={fieldClass}
-            onFocus={revealField}
-          />
-        </div>
-        <div className="grid gap-2.5">
-          <Label htmlFor="issueDate" className="text-base">
-            Issue date
-          </Label>
-          <Input
-            id="issueDate"
-            name="issueDate"
-            type="date"
-            required
-            defaultValue={invoice ? toInputValue(invoice.issueDate) : todayInputValue()}
             className={fieldClass}
             onFocus={revealField}
           />
@@ -311,7 +347,7 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
           <Textarea
             id="notes"
             name="notes"
-            defaultValue={invoice?.notes ?? ""}
+            defaultValue={source?.notes ?? ""}
             placeholder="Payment terms or a short note"
             className="min-h-28 rounded-2xl text-base"
             onFocus={revealField}
