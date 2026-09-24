@@ -12,17 +12,12 @@ const tabs = [
   { href: invoices.services, label: "Services", icon: Sparkles },
 ];
 
-function NavTab({
-  pathname,
-  href,
-  label,
-  icon: Icon,
-}: {
-  pathname: string;
-  href: string;
-  label: string;
-  icon: typeof FileText;
-}) {
+function isActive(pathname: string, href: string) {
+  if (href === invoices.root) return pathname === invoices.root;
+  return pathname.startsWith(href);
+}
+
+function NavTab({ pathname, href, label, icon: Icon }: { pathname: string; href: string; label: string; icon: typeof FileText }) {
   const active = isActive(pathname, href);
   return (
     <Link
@@ -38,17 +33,12 @@ function NavTab({
   );
 }
 
-function isActive(pathname: string, href: string) {
-  if (href === invoices.root) return pathname === invoices.root;
-  return pathname.startsWith(href);
-}
-
 export function InvoiceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const formScreen = isInvoiceFormPath(pathname);
 
   return (
-    <div className="app-shell min-h-dvh overflow-x-clip bg-[radial-gradient(120%_80%_at_0%_-10%,rgba(46,196,182,0.22),transparent_42%),radial-gradient(90%_60%_at_100%_0%,rgba(56,189,248,0.14),transparent_40%),linear-gradient(180deg,#f4fbfb_0%,#eef6f6_100%)]">
+    <div className="app-shell min-h-dvh shrink-0 overflow-x-clip bg-[radial-gradient(120%_80%_at_0%_-10%,rgba(46,196,182,0.22),transparent_42%),radial-gradient(90%_60%_at_100%_0%,rgba(56,189,248,0.14),transparent_40%),linear-gradient(180deg,#f4fbfb_0%,#eef6f6_100%)]">
       <header className="app-header sticky top-0 z-40 border-b border-border bg-white">
         <div className="app-header-inner mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-5 pt-[env(safe-area-inset-top)]">
           <Link href={hubPath} className="flex min-h-11 items-center gap-2">
@@ -91,10 +81,8 @@ export function InvoiceShell({ children }: { children: React.ReactNode }) {
 
       <main
         className={cn(
-          "app-main mx-auto w-full min-w-0 max-w-6xl flex-1 px-5 py-6 md:py-10",
-          formScreen
-            ? "pb-[calc(2rem+env(safe-area-inset-bottom))]"
-            : "pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:pb-10",
+          "app-main mx-auto w-full min-w-0 max-w-6xl flex-1 px-5 pt-6 md:pt-10",
+          formScreen ? "pb-0" : "pb-[calc(7.5rem+env(safe-area-inset-bottom))] md:pb-10",
         )}
       >
         {children}

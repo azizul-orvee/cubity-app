@@ -1,68 +1,86 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import { formatDate } from "@/lib/dates";
-import { getInvoices, invoiceDue } from "@/lib/invoice-queries";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { InvoiceList } from "@/components/invoice-list";
+import { getInvoices, invoiceDue, invoiceTotal } from "@/lib/invoice-queries";
 import { formatMoney } from "@/lib/money";
 import { invoices } from "@/lib/routes";
 
 export default async function InvoicesPage() {
   const rows = await getInvoices();
   const outstanding = rows.reduce((sum, invoice) => sum + invoiceDue(invoice), 0);
+  const billed = rows.reduce((sum, invoice) => sum + invoiceTotal(invoice.lines), 0);
+  const collected = billed - outstanding;
+  const paidPercent = billed > 0 ? Math.min(collected / billed, 1) : 0;
+  const open = rows.filter((invoice) => invoiceDue(invoice) > 0).length;
+
+  const items = rows.map((invoice) => ({
+    id: invoice.id,
+    number: invoice.number,
+    clientName: invoice.clientName,
+    issueDate: invoice.issueDate.toISOString(),
+    billed: invoiceTotal(invoice.lines),
+    paid: invoice.paidAmount,
+  }));
 
   return (
-    <div className="mx-auto grid max-w-lg gap-6">
+    <div className="mx-auto grid max-w-lg grid-cols-1 gap-8 md:max-w-2xl">
       <div>
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Cubity</p>
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Billing</p>
         <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Invoices</h1>
-      </div>
-
-      <div className="rounded-[1.75rem] bg-[#128C86] p-6 text-white shadow-[0_16px_40px_rgba(18,140,134,0.28)]">
-        <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-white/80">Still due</p>
-        <p className="mt-2 text-4xl font-semibold tracking-tight">{formatMoney(outstanding)}</p>
-        <p className="mt-2 text-sm text-white/80">
-          {rows.length} {rows.length === 1 ? "invoice" : "invoices"}
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {rows.length} {rows.length === 1 ? "invoice" : "invoices"} written by Cubity
         </p>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="rounded-[1.75rem] bg-white p-8 text-center ring-1 ring-black/[0.06]">
-          <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#128C86] text-white">
-            <FileText className="size-6" />
-          </span>
-          <h2 className="mt-4 text-lg font-semibold">No invoices yet</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Pick services, enter amounts, and Cubity will write the invoice.
-          </p>
-          <Link
-            href={invoices.new}
-            className="mt-5 inline-flex h-12 items-center rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground"
-          >
-            New invoice
-          </Link>
+      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#0F766E] via-[#128C86] to-[#7DD3FC] px-6 py-7 text-white shadow-[0_18px_40px_rgba(15,118,110,0.22)]">
+        <div className="absolute -top-10 -right-8 size-36 rounded-full bg-white/15" />
+        <div className="absolute -bottom-16 left-10 size-40 rounded-full bg-cyan-200/20" />
+        <p className="relative text-[11px] font-semibold tracking-[0.2em] text-white/70 uppercase">Still due</p>
+        <p className="relative mt-3 text-[2.35rem] leading-none font-semibold tracking-tight">{formatMoney(outstanding)}</p>
+        <div className="relative mt-6 h-1.5 overflow-hidden rounded-full bg-white/20">
+          <div className="h-full rounded-full bg-white" style={{ width: `${paidPercent * 100}%` }} />
         </div>
+        <p className="relative mt-3 text-sm leading-relaxed text-white/85">
+          Paid {formatMoney(collected)} of {formatMoney(billed)} billed
+        </p>
+        <div className="relative mt-5 grid grid-cols-2 gap-2">
+          <div className="rounded-2xl bg-white/15 px-3 py-3 backdrop-blur-sm">
+            <p className="text-[11px] text-white/75">Open invoices</p>
+            <p className="text-lg font-semibold">{open}</p>
+          </div>
+          <div className="rounded-2xl bg-black/10 px-3 py-3 backdrop-blur-sm">
+            <p className="text-[11px] text-white/75">Collected</p>
+            <p className="text-lg font-semibold">{formatMoney(collected)}</p>
+          </div>
+        </div>
+      </section>
+
+      {rows.length === 0 ? (
+        <Empty className="border bg-white">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileText />
+            </EmptyMedia>
+            <EmptyTitle>No invoices yet</EmptyTitle>
+            <EmptyDescription>Pick services, enter amounts, and Cubity will write the invoice.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button asChild>
+              <Link href={invoices.new}>New invoice</Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : (
-        <ul className="grid gap-3">
-          {rows.map((invoice) => (
-            <li key={invoice.id}>
-              <Link
-                href={invoices.invoice(invoice.id)}
-                className="block rounded-[1.5rem] bg-white p-5 ring-1 ring-black/[0.06]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold">{invoice.clientName}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {invoice.number} · {formatDate(invoice.issueDate)}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-base font-semibold text-[#128C86]">
-                    {formatMoney(invoiceDue(invoice))}
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <InvoiceList items={items} />
       )}
     </div>
   );

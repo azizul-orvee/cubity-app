@@ -219,3 +219,7 @@ select {
     animation: none;
   }
 }
+
+html.keyboard-open .invoice-dock {
+  position: static;
+}

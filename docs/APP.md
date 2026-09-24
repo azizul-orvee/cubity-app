@@ -47,12 +47,12 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim-due-statement.pdf`), including bKash and bank payment details |
 | `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
-| `/invoices` | Invoice list with a billed total. Bottom nav: Invoices, Services, and New. No accountant gate. |
-| `/invoices/new` | New invoice: client, optional phone, project, address, date, services with amounts, and how much is already paid |
-| `/invoices/[id]` | Invoice detail, PDF download, edit, delete. Delete asks for confirmation first |
+| `/invoices` | Still-due card (paid of billed, open invoices, collected), search by client or invoice number, filter chips (All / Unpaid / Partly paid / Paid). Bottom nav: Invoices, Services, and New. No accountant gate. |
+| `/invoices/new` | New invoice in cards: Bill to (client, optional phone, project, address, date), Services (tap to pick, amount box opens), Payment (paid now with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button |
+| `/invoices/[id]` | Invoice detail laid out like a Receivables client: amount due card, Call and WhatsApp when a phone is saved, Download invoice PDF, services with billed / paid / still due, client details, edit, delete. Delete asks for confirmation first |
 | `/invoices/[id]/edit` | Change the client or the selected services and amounts |
 | `/invoices/[id]/pdf` | Download that invoice PDF (file named like `Client-Name-INV-0001-invoice.pdf`) |
-| `/invoices/services` | Rename, remove, or add services. The list stays on this phone. Defaults are the five design services |
+| `/invoices/services` | Add a service at the top, then rename or remove each one in the list (remove shows Undo). The list stays on this phone. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
 
@@ -62,7 +62,7 @@ The site is a **workspace**, not a single app. Each product owns a folder:
 
 - `src/app/page.tsx` — hub cards
 - `src/app/receivables/` — dues app (`AppShell` header + bottom nav)
-- `src/app/invoices/` — invoice maker (`InvoiceShell` header + bottom nav, no role gate)
+- `src/app/invoices/` — invoice maker (`InvoiceShell` header + bottom nav, no role gate). Uses the same colors, cards, and wording as Receivables
 - `src/components/site-chrome.tsx` — Cubity header + office footer for hub and non-receivables screens
 - `src/lib/routes.ts` — path helpers so links do not hard-code product URLs
 - `src/lib/workspace-role.ts` — accountant vs engineer role cookie and password check (code-only, no env vars)
@@ -221,6 +221,7 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-25 — Restyled the invoice maker to match Receivables: same teal cards, avatars, badges, and bottom nav, plus search, filters, a sticky due bar, and quick paid amounts. No change to data, validation, or the PDF.
 - 2026-09-25 — Asked for confirmation before deleting an invoice, and showed the Cubity seal on invoice screens only while the database query is still running.
 - 2026-09-25 — Invoice amounts and paid amounts accept whole numbers only. Letters and fractions are rejected.
 - 2026-09-25 — Added a paid amount on invoices so the screen and PDF show billed, paid, and what is still due.

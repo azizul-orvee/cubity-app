@@ -10,13 +10,13 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   if (!invoice) notFound();
 
   return (
-    <div className="mx-auto grid max-w-lg gap-6">
+    <div className="mx-auto grid max-w-lg grid-cols-1 gap-7">
       <div>
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">{invoice.number}</p>
-        <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Edit invoice</h1>
-        <Link href={invoices.invoice(invoice.id)} className="mt-3 inline-flex min-h-11 items-center text-sm text-primary">
+        <Link href={invoices.invoice(invoice.id)} className="text-sm font-medium text-primary">
           Back to invoice
         </Link>
+        <p className="mt-4 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">{invoice.number}</p>
+        <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Edit invoice</h1>
       </div>
       <InvoiceForm invoice={invoice} />
     </div>

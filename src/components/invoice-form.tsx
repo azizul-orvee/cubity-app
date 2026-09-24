@@ -1,23 +1,23 @@
 "use client";
 
-import { useActionState, useEffect, useState, type FocusEvent } from "react";
+import { useActionState, useEffect, useState, type FocusEvent, type ReactNode } from "react";
 import type { Invoice, InvoiceLine } from "@prisma/client";
+import Link from "next/link";
+import { Check } from "lucide-react";
 import { saveInvoice } from "@/lib/invoice-actions";
 import { loadInvoiceServices, type CatalogService } from "@/lib/invoice-catalog";
 import { todayInputValue, toInputValue } from "@/lib/dates";
 import { formatMoney, poishaToInput } from "@/lib/money";
 import { invoices } from "@/lib/routes";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SubmitButton } from "@/components/submit-button";
-import { Check } from "lucide-react";
-import Link from "next/link";
 
 type State = { error?: string } | undefined;
 
-const fieldClass = "h-14 rounded-2xl text-base";
+const fieldClass = "h-14 rounded-2xl text-base md:h-14 md:text-base";
 
 function digitsOnly(value: string) {
   const whole = value.replace(/,/g, "").split(".")[0] ?? "";
@@ -30,11 +30,31 @@ function revealField(event: FocusEvent<HTMLElement>) {
   }, 120);
 }
 
+function Section({ title, hint, aside, children }: { title: string; hint?: string; aside?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          {hint ? <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{hint}</p> : null}
+        </div>
+        {aside}
+      </div>
+      <div className="mt-5 grid gap-6">{children}</div>
+    </section>
+  );
+}
+
+function Optional() {
+  return <span className="font-normal text-muted-foreground">(optional)</span>;
+}
+
 export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceLine[] } }) {
   const [services, setServices] = useState<CatalogService[]>([]);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [justSelected, setJustSelected] = useState<string | null>(null);
   const [paid, setPaid] = useState(invoice ? poishaToInput(invoice.paidAmount) : "");
 
   useEffect(() => {
@@ -69,18 +89,23 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
   const paidTaka = Number.parseInt(paid, 10);
   const paidAmount = Number.isFinite(paidTaka) ? paidTaka * 100 : 0;
   const due = total - paidAmount;
+  const overpaid = total > 0 && paidAmount > total;
+  const totalTaka = Math.floor(total / 100);
+
+  const paidPresets: { label: string; value: string | null }[] = [
+    { label: "Nothing yet", value: "" },
+    { label: "Half", value: totalTaka > 0 ? String(Math.floor(totalTaka / 2)) : null },
+    { label: "Full amount", value: totalTaka > 0 ? String(totalTaka) : null },
+  ];
 
   function toggle(id: string) {
+    setJustSelected(selected.includes(id) ? null : id);
     setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
 
   return (
-    <form action={formAction} className="grid gap-6 pb-8">
-      {state?.error ? (
-        <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">{state.error}</p>
-      ) : null}
-
-      <section className="grid gap-5 rounded-[1.75rem] bg-white p-5 ring-1 ring-black/[0.06]">
+    <form action={formAction} className="grid grid-cols-1 gap-5">
+      <Section title="Bill to" hint="Who the invoice is for.">
         <div className="grid gap-2.5">
           <Label htmlFor="clientName" className="text-base">
             Client
@@ -99,13 +124,14 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
         </div>
         <div className="grid gap-2.5">
           <Label htmlFor="clientPhone" className="text-base">
-            Phone <span className="font-normal text-muted-foreground">(optional)</span>
+            Phone <Optional />
           </Label>
           <Input
             id="clientPhone"
             name="clientPhone"
             type="tel"
             inputMode="tel"
+            enterKeyHint="next"
             defaultValue={invoice?.clientPhone ?? ""}
             placeholder="01XXXXXXXXX"
             className={fieldClass}
@@ -114,11 +140,12 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
         </div>
         <div className="grid gap-2.5">
           <Label htmlFor="projectName" className="text-base">
-            Site / project <span className="font-normal text-muted-foreground">(optional)</span>
+            Site / project <Optional />
           </Label>
           <Input
             id="projectName"
             name="projectName"
+            enterKeyHint="next"
             defaultValue={invoice?.projectName ?? ""}
             placeholder="e.g. Chowhatta residence"
             className={fieldClass}
@@ -127,13 +154,13 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
         </div>
         <div className="grid gap-2.5">
           <Label htmlFor="clientAddress" className="text-base">
-            Address <span className="font-normal text-muted-foreground">(optional)</span>
+            Address <Optional />
           </Label>
           <Input
             id="clientAddress"
             name="clientAddress"
             defaultValue={invoice?.clientAddress ?? ""}
-            placeholder="Billing address"
+            placeholder="House, road, area"
             className={fieldClass}
             onFocus={revealField}
           />
@@ -152,126 +179,167 @@ export function InvoiceForm({ invoice }: { invoice?: Invoice & { lines: InvoiceL
             onFocus={revealField}
           />
         </div>
-      </section>
+      </Section>
 
-      <section className="grid gap-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Services</p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight">What are you billing?</h2>
-          </div>
-          <Link href={invoices.services} className="min-h-11 text-sm font-medium text-primary">
+      <Section
+        title="Services"
+        hint="Tap a service, then enter its amount."
+        aside={
+          <Link href={invoices.services} className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-primary">
             Edit list
           </Link>
-        </div>
+        }
+      >
         {services.length === 0 ? (
-          <p className="rounded-[1.75rem] bg-white p-5 text-sm text-muted-foreground ring-1 ring-black/[0.06]">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             No services yet. Add one from the services list, then come back.
           </p>
         ) : (
-          services.map((service) => {
-            const on = selected.includes(service.id);
-            return (
-              <div
-                key={service.id}
-                className={
-                  on
-                    ? "rounded-[1.5rem] bg-white p-4 ring-2 ring-primary shadow-[0_8px_24px_rgba(18,140,134,0.12)]"
-                    : "rounded-[1.5rem] bg-white p-4 ring-1 ring-black/[0.06]"
-                }
-              >
-                <button
-                  type="button"
-                  onClick={() => toggle(service.id)}
-                  className="flex min-h-12 w-full items-center gap-3 text-left"
+          <div className="grid gap-3">
+            {services.map((service) => {
+              const on = selected.includes(service.id);
+              const raw = amounts[service.id] ?? "";
+              return (
+                <div
+                  key={service.id}
+                  className={cn(
+                    "rounded-2xl px-4 py-3 transition-colors",
+                    on ? "bg-white ring-2 ring-primary shadow-[0_8px_24px_rgba(18,140,134,0.12)]" : "bg-[#F6FAFA]",
+                  )}
                 >
-                  <span
-                    className={
-                      on
-                        ? "grid size-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"
-                        : "grid size-7 shrink-0 place-items-center rounded-full ring-1 ring-border"
-                    }
+                  <button
+                    type="button"
+                    onClick={() => toggle(service.id)}
+                    aria-pressed={on}
+                    className="flex min-h-12 w-full items-center gap-3 text-left"
                   >
-                    {on ? <Check className="size-4" /> : null}
-                  </span>
-                  <span className="text-base leading-snug font-medium">{service.name}</span>
-                </button>
-                {on ? (
-                  <div className="mt-3 grid gap-2 pl-10">
-                    <Label htmlFor={`amount-${service.id}`}>Amount (Tk)</Label>
-                    <input type="hidden" name="serviceName" value={service.name} />
-                    <Input
-                      id={`amount-${service.id}`}
-                      name="amount"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete="off"
-                      required
-                      placeholder="0"
-                      value={amounts[service.id] ?? ""}
-                      onChange={(event) =>
-                        setAmounts((current) => ({ ...current, [service.id]: digitsOnly(event.target.value) }))
-                      }
-                      className={fieldClass}
-                      onFocus={revealField}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            );
-          })
+                    <span
+                      className={cn(
+                        "grid size-7 shrink-0 place-items-center rounded-full",
+                        on ? "bg-primary text-primary-foreground" : "bg-white ring-1 ring-border",
+                      )}
+                    >
+                      {on ? <Check className="size-4" /> : null}
+                    </span>
+                    <span className="min-w-0 flex-1 text-base leading-snug font-medium">{service.name}</span>
+                    {on && raw ? (
+                      <span className="shrink-0 text-sm font-semibold tabular-nums text-[#0F766E]">
+                        {formatMoney(Number.parseInt(raw, 10) * 100)}
+                      </span>
+                    ) : null}
+                  </button>
+                  {on ? (
+                    <div className="mt-2 mb-1 grid gap-2 pl-10">
+                      <Label htmlFor={`amount-${service.id}`}>Amount (Tk)</Label>
+                      <input type="hidden" name="serviceName" value={service.name} />
+                      <Input
+                        id={`amount-${service.id}`}
+                        name="amount"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="off"
+                        required
+                        autoFocus={justSelected === service.id}
+                        placeholder="0"
+                        value={raw}
+                        onChange={(event) =>
+                          setAmounts((current) => ({ ...current, [service.id]: digitsOnly(event.target.value) }))
+                        }
+                        className={fieldClass}
+                        onFocus={revealField}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         )}
-      </section>
+      </Section>
 
-      <section className="grid gap-2.5 rounded-[1.75rem] bg-white p-5 ring-1 ring-black/[0.06]">
-        <Label htmlFor="paid" className="text-base">
-          Paid now <span className="font-normal text-muted-foreground">(optional)</span>
-        </Label>
-        <p className="text-sm text-muted-foreground">Leave blank if nothing has been paid yet.</p>
-        <Input
-          id="paid"
-          name="paid"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete="off"
-          placeholder="0"
-          value={paid}
-          onChange={(event) => setPaid(digitsOnly(event.target.value))}
-          className={fieldClass}
-          onFocus={revealField}
-        />
-      </section>
+      <Section title="Payment" hint="How much the client has already paid.">
+        <div className="grid gap-2.5">
+          <Label htmlFor="paid" className="text-base">
+            Paid now <Optional />
+          </Label>
+          <Input
+            id="paid"
+            name="paid"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            placeholder="0"
+            value={paid}
+            onChange={(event) => setPaid(digitsOnly(event.target.value))}
+            aria-invalid={overpaid || undefined}
+            className={fieldClass}
+            onFocus={revealField}
+          />
+          <div className="flex flex-wrap gap-2 pt-1">
+            {paidPresets.map((preset) => {
+              const value = preset.value;
+              const active = value !== null && paid === value;
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  disabled={value === null}
+                  aria-pressed={active}
+                  onClick={() => value !== null && setPaid(value)}
+                  className={
+                    active
+                      ? "inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
+                      : "inline-flex min-h-11 items-center rounded-full bg-white px-5 text-sm font-medium text-muted-foreground ring-1 ring-border disabled:opacity-40"
+                  }
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className={cn("text-sm", overpaid ? "text-destructive" : "text-muted-foreground")}>
+            {overpaid ? "Paid amount is higher than the invoice total." : "Leave blank if nothing has been paid yet."}
+          </p>
+        </div>
+      </Section>
 
-      <section className="grid gap-2.5 rounded-[1.75rem] bg-white p-5 ring-1 ring-black/[0.06]">
-        <Label htmlFor="notes" className="text-base">
-          Notes <span className="font-normal text-muted-foreground">(optional)</span>
-        </Label>
-        <Textarea
-          id="notes"
-          name="notes"
-          defaultValue={invoice?.notes ?? ""}
-          placeholder="Payment terms or a short note"
-          className="min-h-24 rounded-2xl text-base"
-          onFocus={revealField}
-        />
-      </section>
+      <Section title="Notes">
+        <div className="grid gap-2.5">
+          <Label htmlFor="notes" className="text-base">
+            Note <Optional />
+          </Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            defaultValue={invoice?.notes ?? ""}
+            placeholder="Payment terms or a short note"
+            className="min-h-28 rounded-2xl text-base"
+            onFocus={revealField}
+          />
+        </div>
+      </Section>
 
-      <div className="rounded-[1.75rem] bg-[#128C86] p-5 text-white shadow-[0_16px_40px_rgba(18,140,134,0.28)]">
-        <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-white/80">Due</p>
-        <p className="mt-1 text-3xl font-semibold tracking-tight">{formatMoney(Math.max(due, 0))}</p>
-        <p className="mt-2 text-sm text-white/80">
-          Billed {formatMoney(total)} · Paid {formatMoney(paidAmount)}
-        </p>
+      <div className="invoice-dock sticky bottom-0 z-30 -mx-5 mt-3 border-t border-border bg-white px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        {state?.error ? (
+          <p role="alert" className="mb-3 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {state.error}
+          </p>
+        ) : null}
+        <div className="mx-auto flex max-w-lg items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold tracking-[0.16em] text-primary uppercase">Still due</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums tracking-tight text-[#0F766E]">
+              {formatMoney(Math.max(due, 0))}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {formatMoney(total)} billed
+            </p>
+          </div>
+          <SubmitButton className="h-14 shrink-0 rounded-2xl px-6 text-base md:h-14">
+            {invoice ? "Save invoice" : "Create invoice"}
+          </SubmitButton>
+        </div>
       </div>
-
-      <SubmitButton className="h-14 w-full rounded-2xl text-base">
-        {invoice ? "Save invoice" : "Create invoice"}
-      </SubmitButton>
-      {invoice ? (
-        <Button variant="outline" className="h-14 rounded-2xl" asChild>
-          <Link href={invoices.invoice(invoice.id)}>Cancel</Link>
-        </Button>
-      ) : null}
     </form>
   );
 }
