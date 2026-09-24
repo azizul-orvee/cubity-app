@@ -49,7 +49,7 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
 | `/invoices` | Invoice list with a billed total. Bottom nav: Invoices, Services, and New. No accountant gate. |
 | `/invoices/new` | New invoice: client, optional phone, project, address, date, services with amounts, and how much is already paid |
-| `/invoices/[id]` | Invoice detail, PDF download, edit, delete |
+| `/invoices/[id]` | Invoice detail, PDF download, edit, delete. Delete asks for confirmation first |
 | `/invoices/[id]/edit` | Change the client or the selected services and amounts |
 | `/invoices/[id]/pdf` | Download that invoice PDF (file named like `Client-Name-INV-0001-invoice.pdf`) |
 | `/invoices/services` | Rename, remove, or add services. The list stays on this phone. Defaults are the five design services |
@@ -115,7 +115,7 @@ Mobile-first visual summary (not a table dump):
 
 Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, accountant only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the accountant. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
 
-Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. Same on the website and in the Android app. Receivables runs in Singapore, next to the Neon database.
+Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. Same on the website and in the Android app. Receivables and Invoice maker both run in Singapore, next to the Neon database. The invoice list and an open invoice show the same seal only while that query is still running.
 
 ### PDFs
 
@@ -221,6 +221,7 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-25 — Asked for confirmation before deleting an invoice, and showed the Cubity seal on invoice screens only while the database query is still running.
 - 2026-09-25 — Invoice amounts and paid amounts accept whole numbers only. Letters and fractions are rejected.
 - 2026-09-25 — Added a paid amount on invoices so the screen and PDF show billed, paid, and what is still due.
 - 2026-09-25 — Kept the invoice service list on the phone. Only a saved invoice is written to the database.

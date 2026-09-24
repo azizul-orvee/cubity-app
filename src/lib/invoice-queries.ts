@@ -3,8 +3,15 @@ import { prisma } from "@/lib/db";
 
 export const getInvoices = cache(async () => {
   return prisma.invoice.findMany({
-    include: { lines: { orderBy: { sortOrder: "asc" } } },
     orderBy: { issueDate: "desc" },
+    select: {
+      id: true,
+      number: true,
+      clientName: true,
+      issueDate: true,
+      paidAmount: true,
+      lines: { select: { amount: true } },
+    },
   });
 });
 

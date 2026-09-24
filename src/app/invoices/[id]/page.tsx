@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { DeleteInvoiceButton } from "@/components/delete-buttons";
 import { PdfDownload } from "@/components/pdf-download";
-import { deleteInvoice } from "@/lib/invoice-actions";
 import { formatDate } from "@/lib/dates";
 import { getInvoice, invoiceDue, invoiceTotal } from "@/lib/invoice-queries";
 import { formatMoney } from "@/lib/money";
@@ -13,7 +13,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!invoice) notFound();
   const total = invoiceTotal(invoice.lines);
   const due = invoiceDue(invoice);
-  const remove = deleteInvoice.bind(null, invoice.id);
 
   return (
     <div className="mx-auto grid max-w-lg gap-5">
@@ -67,11 +66,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         Edit invoice
       </Link>
 
-      <form action={remove}>
-        <button type="submit" className="h-12 w-full text-sm font-medium text-destructive">
-          Delete invoice
-        </button>
-      </form>
+      <DeleteInvoiceButton invoiceId={invoice.id} name={invoice.clientName} />
     </div>
   );
 }
