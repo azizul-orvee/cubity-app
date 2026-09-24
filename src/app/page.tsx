@@ -22,9 +22,9 @@ const products = [
   {
     href: invoices.root,
     title: "Invoice maker",
-    copy: "Build and send Cubity invoices. This workspace is next.",
+    copy: "Write a Cubity invoice, pick services, and download the PDF.",
     icon: FileText,
-    ready: false,
+    ready: true,
   },
 ] as const;
 
@@ -63,7 +63,7 @@ export default async function HubPage() {
             const cardClass =
               "w-full rounded-[1.75rem] bg-white p-6 text-left ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]";
 
-            if (product.ready && !role) {
+            if (product.href === receivables.root && !role) {
               return (
                 <RoleGate key={product.href}>
                   <button type="button" className={cardClass}>

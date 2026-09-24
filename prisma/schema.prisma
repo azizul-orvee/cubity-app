@@ -41,6 +41,32 @@ model LedgerEntry {
   @@index([date])
 }
 
+model Invoice {
+  id            String        @id @default(cuid())
+  number        String        @unique
+  clientName    String
+  clientPhone   String?
+  clientAddress String?
+  projectName   String?
+  issueDate     DateTime
+  paidAmount    Int          @default(0)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  lines         InvoiceLine[]
+}
+
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  serviceName String
+  amount      Int
+  sortOrder   Int     @default(0)
+
+  @@index([invoiceId])
+}
+
 model CompanyPayment {
   id                 String   @id
   bkashNumber        String

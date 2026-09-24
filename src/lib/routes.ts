@@ -32,9 +32,26 @@ export const receivables = {
   },
 };
 
+const INVOICES = "/invoices";
+
 export const invoices = {
-  root: "/invoices",
+  root: INVOICES,
+  services: `${INVOICES}/services`,
+  new: `${INVOICES}/new`,
+  invoice(id: string) {
+    return `${INVOICES}/${id}`;
+  },
+  edit(id: string) {
+    return `${INVOICES}/${id}/edit`;
+  },
+  pdf(id: string) {
+    return `${INVOICES}/${id}/pdf`;
+  },
 };
+
+export function isInvoiceFormPath(pathname: string) {
+  return pathname === invoices.new || /^\/invoices\/[^/]+\/edit$/.test(pathname);
+}
 
 export function isReceivablesFormPath(pathname: string) {
   return (

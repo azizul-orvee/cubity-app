@@ -23,6 +23,18 @@ import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, type ClientWithEntries } from "@/lib/ledger";
 import { formatMoneyPdf } from "@/lib/money";
 
+export type InvoicePdfData = {
+  number: string;
+  clientName: string;
+  clientPhone: string | null;
+  clientAddress: string | null;
+  projectName: string | null;
+  issueDate: Date;
+  notes: string | null;
+  paidAmount: number;
+  lines: { serviceName: string; amount: number }[];
+};
+
 const TEAL = rgb(0.14, 0.52, 0.52);
 const TEAL_DEEP = rgb(0.08, 0.3, 0.31);
 const INK = rgb(0.07, 0.09, 0.11);
@@ -805,6 +817,176 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
   drawRight(page, "Total receivable", width - MARGIN - 90, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(total), width - MARGIN - CELL_PAD, y, bold, 13, RED);
 
+  drawContactFooter(page, regular);
+  return pdf.save();
+}
+
+export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentInstructions) {
+  const pdf = await PDFDocument.create();
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await loadLogo(pdf);
+  const bkashLogo = await loadPng(pdf, "bkash-mark.png");
+  const nrbLogo = await loadPng(pdf, "nrb-mark.png");
+  const total = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
+  const due = total - invoice.paidAmount;
+
+  let page = pdf.addPage([PAGE.width, PAGE.height]);
+  let { width, height } = page.getSize();
+  let y = drawLetterhead(
+    page,
+    logo,
+    { regular, bold },
+    "INVOICE",
+    `${invoice.number}  ·  Issued ${format(invoice.issueDate, "dd MMMM yyyy")}`,
+  );
+
+  drawText(page, "BILLED TO", MARGIN, y, regular, 8, MUTED);
+  drawText(page, invoice.clientName, MARGIN, y - 16, bold, 14, INK);
+  const details = [
+    invoice.clientPhone,
+    invoice.clientAddress,
+    invoice.projectName ? `Site / project: ${invoice.projectName}` : null,
+  ].filter(Boolean) as string[];
+
+  let detailY = y - 33;
+  for (const detail of details) {
+    for (const line of wrapText(detail, regular, 10, 250)) {
+      drawText(page, line, MARGIN, detailY, regular, 10, MUTED);
+      detailY -= 13;
+    }
+  }
+
+  const boxWidth = 232;
+  const boxHeight = 108;
+  const box = {
+    x: width - MARGIN - boxWidth,
+    width: boxWidth,
+    height: boxHeight,
+    bottom: y + 14 - boxHeight,
+  };
+  page.drawRectangle({ x: box.x, y: box.bottom, width: box.width, height: box.height, color: WASH });
+  page.drawRectangle({ x: box.x, y: box.bottom, width: 3, height: box.height, color: TEAL });
+
+  const innerLeft = box.x + 16;
+  const innerRight = box.x + box.width - 14;
+  let boxY = box.bottom + box.height - 16;
+  drawTracked(page, "AMOUNT DUE", innerLeft, boxY, bold, 8, 0.9, MUTED);
+  boxY -= 20;
+  drawText(page, formatMoneyPdf(due), innerLeft, boxY, bold, 19, RED);
+  boxY -= 14;
+  page.drawLine({
+    start: { x: innerLeft, y: boxY },
+    end: { x: innerRight, y: boxY },
+    thickness: 0.4,
+    color: HAIR,
+  });
+  boxY -= 14;
+  drawText(page, "Billed", innerLeft, boxY, regular, 9, MUTED);
+  drawRight(page, formatMoneyPdf(total), innerRight, boxY, regular, 9, INK);
+  boxY -= 14;
+  drawText(page, "Paid", innerLeft, boxY, regular, 9, MUTED);
+  drawRight(page, formatMoneyPdf(invoice.paidAmount), innerRight, boxY, regular, 9, INK);
+
+  y = Math.min(detailY, box.bottom) - 28;
+
+  const particularsX = MARGIN + CELL_PAD;
+  const amountRight = width - MARGIN - CELL_PAD;
+  const particularsWidth = amountRight - 110 - particularsX;
+
+  function headerRow(currentPage: PDFPage, headerY: number) {
+    currentPage.drawRectangle({
+      x: MARGIN,
+      y: headerY - 8,
+      width: width - MARGIN * 2,
+      height: 24,
+      color: TEAL_DEEP,
+    });
+    currentPage.drawText("Particulars", {
+      x: particularsX,
+      y: headerY,
+      size: 9,
+      font: bold,
+      color: WHITE,
+    });
+    drawRight(currentPage, "Amount", amountRight, headerY, bold, 9, WHITE);
+  }
+
+  headerRow(page, y);
+  y -= 26;
+
+  for (const [index, line] of invoice.lines.entries()) {
+    const wrapped = wrapText(line.serviceName, regular, 9, particularsWidth, 2);
+    const rowHeight = 22 + Math.max(0, wrapped.length - 1) * 13;
+    if (y - rowHeight < 128) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
+      ({ width, height } = page.getSize());
+      y = height - 48;
+      headerRow(page, y);
+      y -= 26;
+    }
+    if (index % 2 === 0) {
+      page.drawRectangle({
+        x: MARGIN,
+        y: y - rowHeight + 8,
+        width: width - MARGIN * 2,
+        height: rowHeight,
+        color: WASH,
+      });
+    }
+    drawText(page, wrapped[0] ?? "", particularsX, y, regular, 9, INK);
+    drawRight(page, formatMoneyPdf(line.amount), amountRight, y, regular, 9, INK);
+    let extraY = y - 13;
+    for (const extra of wrapped.slice(1)) {
+      drawText(page, extra, particularsX, extraY, regular, 9, MUTED);
+      extraY -= 12;
+    }
+    y -= rowHeight;
+  }
+
+  y -= 8;
+  page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: width - MARGIN, y },
+    thickness: 0.6,
+    color: HAIR,
+  });
+  y -= 18;
+  drawRight(page, "Billed", amountRight - 90, y, regular, 10, MUTED);
+  drawRight(page, formatMoneyPdf(total), amountRight, y, regular, 10, INK);
+  y -= 16;
+  drawRight(page, "Paid", amountRight - 90, y, regular, 10, MUTED);
+  drawRight(page, formatMoneyPdf(invoice.paidAmount), amountRight, y, regular, 10, INK);
+  y -= 18;
+  drawRight(page, "Total due", amountRight - 90, y, regular, 10, MUTED);
+  drawRight(page, formatMoneyPdf(due), amountRight, y, bold, 13, RED);
+
+  y -= 32;
+  if (invoice.notes) {
+    if (y < 200) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
+      ({ width, height } = page.getSize());
+      page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+      y = height - 36;
+    }
+    drawTracked(page, "NOTES", MARGIN, y, bold, 8, 0.8, MUTED);
+    y -= 14;
+    for (const noteLine of wrapText(invoice.notes, regular, 10, width - MARGIN * 2)) {
+      drawText(page, noteLine, MARGIN, y, regular, 10, MUTED);
+      y -= 13;
+    }
+    y -= 18;
+  }
+
+  const remittanceHeight = 154;
+  if (y < 80 + remittanceHeight) {
+    page = pdf.addPage([PAGE.width, PAGE.height]);
+    ({ width, height } = page.getSize());
+    page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+    y = height - 40;
+  }
+
+  drawPaymentInstructions(page, y, width, { regular, bold }, { bkash: bkashLogo, nrb: nrbLogo }, payment);
   drawContactFooter(page, regular);
   return pdf.save();
 }

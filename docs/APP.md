@@ -1,6 +1,6 @@
 # Cubity
 
-Internal workspace for **Cubity Engineering & Construction Company**. The home screen is a product hub. **Receivables** is live (client dues, payments, statements). **Invoice maker** is a placeholder for the next product. New tools should get their own folder under `src/app/` and a card on `/`.
+Internal workspace for **Cubity Engineering & Construction Company**. The home screen is a product hub. **Receivables** is live (client dues, payments, statements). **Invoice maker** is live (service list, invoices, PDF). New tools should get their own folder under `src/app/` and a card on `/`.
 
 **Office:** Manru Shopping City, Office 243, 1st Floor, Chowhatta, Sylhet  
 **Phones:** 01973-914236, 01711-331406, 01782-161432  
@@ -47,7 +47,12 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim-due-statement.pdf`), including bKash and bank payment details |
 | `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
-| `/invoices` | Invoice maker placeholder until that product is built |
+| `/invoices` | Invoice list with a billed total. Bottom nav: Invoices, Services, and New. No accountant gate. |
+| `/invoices/new` | New invoice: client, optional phone, project, address, date, services with amounts, and how much is already paid |
+| `/invoices/[id]` | Invoice detail, PDF download, edit, delete |
+| `/invoices/[id]/edit` | Change the client or the selected services and amounts |
+| `/invoices/[id]/pdf` | Download that invoice PDF (file named like `Client-Name-INV-0001-invoice.pdf`) |
+| `/invoices/services` | Rename, remove, or add services. The list stays on this phone. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
 
@@ -57,7 +62,7 @@ The site is a **workspace**, not a single app. Each product owns a folder:
 
 - `src/app/page.tsx` — hub cards
 - `src/app/receivables/` — dues app (`AppShell` header + bottom nav)
-- `src/app/invoices/` — invoice maker (placeholder until it is built)
+- `src/app/invoices/` — invoice maker (`InvoiceShell` header + bottom nav, no role gate)
 - `src/components/site-chrome.tsx` — Cubity header + office footer for hub and non-receivables screens
 - `src/lib/routes.ts` — path helpers so links do not hard-code product URLs
 - `src/lib/workspace-role.ts` — accountant vs engineer role cookie and password check (code-only, no env vars)
@@ -117,6 +122,7 @@ Opening Clients (or a client account) from Home shows the **Cubity seal** only w
 - Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance), a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
 - Payment details are edited at `/receivables/settings` (gear in the receivables header). Defaults: bKash `01973 914236`; NRB Bank, Sylhet Main Branch, MD TAREK AHMED, A/C `7087010002828`, routing `290913794`.
 - Company **outstanding receivables** list with office address and phones
+- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. Particulars are the selected services. File name includes the client and invoice number.
 - Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
 ### Extra (beyond the original request)
@@ -196,8 +202,29 @@ When editing receivables (`src/app/receivables/`, `src/lib/routes.ts`, roles, mo
 
 When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL.md` (folder under `src/app/`, helpers in `routes.ts`, card on `/`, then this file).
 
+## Invoices
+
+The invoice maker is open to anyone who taps the hub card. It does not ask for the accountant password.
+
+The service list is stored on the phone, not in Postgres. Defaults, which can be renamed, removed, or extended on **Services**:
+
+- Architectural Planning and Drafting
+- Structural Design & Drafting
+- Plumbing and Sanitary Design & Drafting
+- Electrical Design & Drafting
+- 3D Modeling (Building Exterior)
+
+A saved invoice is the record that goes in the database. It stores the service name and amount at that moment, so later edits to the phone list do not rewrite old invoices. Amounts are poisha, shown as **Tk**. The PDF reuses the receivables payment details (bKash and bank).
+
+- `Invoice` — number (`INV-0001`), client, optional phone, address, project, issue date, amount already paid, notes
+- `InvoiceLine` — service name snapshot and amount
+
 ## Changelog
 
+- 2026-09-25 — Invoice amounts and paid amounts accept whole numbers only. Letters and fractions are rejected.
+- 2026-09-25 — Added a paid amount on invoices so the screen and PDF show billed, paid, and what is still due.
+- 2026-09-25 — Kept the invoice service list on the phone. Only a saved invoice is written to the database.
+- 2026-09-25 — Opened Invoice maker with the five default design services, a Services screen to add or edit that list, and an invoice PDF styled like the due statement.
 - 2026-09-25 — Kept the accountant signed in until they tap Log out. Opening Receivables again no longer asks for the password.
 - 2026-09-25 — Stopped holding every screen for 1.4 seconds behind the Cubity seal, and run Receivables in Singapore next to the database so pages wait on a shorter query.
 - 2026-09-25 — WhatsApp on a client opens the chat with only "Assalamualaikum". The long follow-up text and the PDF attachment attempt are gone.

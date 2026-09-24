@@ -14,7 +14,7 @@ function isAppNavigation(anchor: HTMLAnchorElement) {
   if (href.startsWith("#") || href.startsWith("tel:") || href.startsWith("mailto:") || href.startsWith("sms:")) {
     return false;
   }
-  if (href.includes("/statement") || href.includes("/reports/outstanding")) return false;
+  if (href.includes("/statement") || href.includes("/reports/outstanding") || href.endsWith("/pdf")) return false;
   if (/^https?:/i.test(href) && !href.startsWith(window.location.origin)) return false;
   const next = new URL(href, window.location.href);
   return `${next.pathname}${next.search}` !== `${window.location.pathname}${window.location.search}`;
