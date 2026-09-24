@@ -22,6 +22,8 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Next.js prints 
 
 Name and phone are required to create a client. Email and address are optional. Company, site/project, and notes are only on the edit screen.
 
+Opening **Receivables** asks whether you are the **accountant** or an **engineer**. The accountant password is checked in code (not the database). Engineers get a view-only app: they can read clients, ledgers, and PDFs, and they can call or WhatsApp, but they cannot add, edit, or delete.
+
 ## Core story
 
 1. Site visit: client was supposed to pay Tk 10,000, paid Tk 3,000, promised the remaining Tk 7,000 for Saturday.
@@ -34,16 +36,16 @@ Name and phone are required to create a client. Email and address are optional. 
 
 | Where | What it does |
 | --- | --- |
-| `/` Workspace | Cubity header and office footer. Two product cards: Receivables and Invoice maker |
-| `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp |
+| `/` Workspace | Cubity header and office footer. Two product cards: Receivables (opens a role popup) and Invoice maker |
+| `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp. Blocked until a role is chosen. Engineers see view-only (no add client). |
 | `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
-| `/receivables/clients/new` | Add a client: name and phone required, email and address optional |
-| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF, delete |
-| `/receivables/clients/[id]/edit` | Edit profile |
-| `/receivables/clients/[id]/due` | Add a due / site visit (billed + paid now + promised date + optional promised amount) |
-| `/receivables/clients/[id]/pay` | Log a payment (amount, date, method; promised date and optional amount if money remains) |
+| `/receivables/clients/new` | Add a client: name and phone required, email and address optional (accountant only) |
+| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF; accountant can edit, add due, pay, delete |
+| `/receivables/clients/[id]/edit` | Edit profile (accountant only) |
+| `/receivables/clients/[id]/due` | Add a due / site visit (accountant only) |
+| `/receivables/clients/[id]/pay` | Log a payment (accountant only) |
 | `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim.pdf`), including bKash and bank payment details |
-| `/receivables/settings` | Edit the bKash number and bank account printed on due statements |
+| `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
 | `/invoices` | Invoice maker placeholder until that product is built |
 
@@ -58,8 +60,18 @@ The site is a **workspace**, not a single app. Each product owns a folder:
 - `src/app/invoices/` — invoice maker (placeholder until it is built)
 - `src/components/site-chrome.tsx` — Cubity header + office footer for hub and non-receivables screens
 - `src/lib/routes.ts` — path helpers so links do not hard-code product URLs
+- `src/lib/workspace-role.ts` — accountant vs engineer role cookie and password check (code-only, no env vars)
 
 To add another product later: create `src/app/<name>/`, add paths in `routes.ts`, and put a card on `/`.
+
+### Accountant and engineer
+
+Clicking Receivables on the hub (or opening `/receivables` with no role yet) shows a popup:
+
+- **Accountant** — password required, then full add/edit access
+- **Engineer** — no password, view-only
+
+The chosen role is stored in an httpOnly cookie for 30 days. Click Receivables on the hub again to switch. Server actions and add/edit routes reject engineers even if they hit the URL directly.
 
 ## Features
 
@@ -96,7 +108,7 @@ Mobile-first visual summary (not a table dump):
 - Overdue and upcoming queues
 - Cubity office stamp (Sylhet address, three phones, email)
 
-Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account).
+Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, accountant only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the accountant. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
 
 Opening Clients (or a client account) from Home shows the **Cubity seal appearing** while the database catches up: paint-in, bloom from the cube, or rise from the bottom — one of the three at random. Same on the website and in the Android app.
 
@@ -174,7 +186,19 @@ Cursor always applies:
 - Update this file whenever the app changes
 - Never `git commit` or `git push` unless you confirm in chat
 
+When editing receivables (`src/app/receivables/`, `src/lib/routes.ts`, roles, money, `AppShell`):
+
+- Accountant writes; engineer is view-only in the UI **and** on the server
+- Show money as **Tk** via `src/lib/money.ts`
+- Import paths from `src/lib/routes.ts` — do not hard-code `/receivables/...`
+- Mobile-first (thumb-zone bottom nav, large tap targets)
+
+When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL.md` (folder under `src/app/`, helpers in `routes.ts`, card on `/`, then this file).
+
 ## Changelog
+
+- 2026-09-19 — Added a receivables Cursor rule (roles, Tk, path helpers, mobile-first) and an add-product skill so new workspace tools get an `src/app/` folder, `routes.ts` helpers, a hub card, and an APP.md update.
+- 2026-09-18 — Added an Accountant / Engineer popup when opening Receivables. Accountants unlock with a password stored in code; engineers get a view-only app with add, edit, and delete hidden and blocked on the server.
 
 - 2026-09-16 — Cropped empty space off the bKash crane PNG so the mark sits on the same left edge as the pink bar on due statements.
 - 2026-09-16 — Added a promised amount next to the promised date so a client can commit to paying only part of the outstanding (app forms, client page, dashboard Coming up, and due-statement PDF).

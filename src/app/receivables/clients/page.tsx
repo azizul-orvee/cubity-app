@@ -15,6 +15,7 @@ import { clientStatus } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
 import { getClients } from "@/lib/queries";
 import { receivables } from "@/lib/routes";
+import { canEditReceivables } from "@/lib/workspace-role";
 
 const filters = [
   { value: "all", label: "All" },
@@ -40,7 +41,7 @@ export default async function ClientsPage({
   searchParams: Promise<{ q?: string; filter?: string }>;
 }) {
   const { q = "", filter = "all" } = await searchParams;
-  const clients = await getClients();
+  const [clients, canEdit] = await Promise.all([getClients(), canEditReceivables()]);
   const query = q.trim().toLowerCase();
 
   const rows = clients
@@ -113,11 +114,13 @@ export default async function ClientsPage({
             <EmptyTitle>{clients.length === 0 ? "No clients yet" : "No matching clients"}</EmptyTitle>
             <EmptyDescription>
               {clients.length === 0
-                ? "Add a real client, then log dues and partial payments."
+                ? canEdit
+                  ? "Add a real client, then log dues and partial payments."
+                  : "No client accounts to view yet."
                 : "Try another search or filter."}
             </EmptyDescription>
           </EmptyHeader>
-          {clients.length === 0 ? (
+          {clients.length === 0 && canEdit ? (
             <EmptyContent>
               <Button asChild>
                 <Link href={receivables.clientsNew}>Add client</Link>

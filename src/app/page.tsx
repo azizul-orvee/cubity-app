@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, Wallet } from "lucide-react";
+import { RoleGate } from "@/components/role-gate";
 import { SiteChrome } from "@/components/site-chrome";
 import { COMPANY } from "@/lib/company";
 import { invoices, receivables } from "@/lib/routes";
@@ -45,12 +46,8 @@ export default function HubPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {products.map((product) => {
             const Icon = product.icon;
-            return (
-              <Link
-                key={product.href}
-                href={product.href}
-                className="rounded-[1.75rem] bg-white p-6 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
-              >
+            const card = (
+              <>
                 <span className="grid size-14 place-items-center rounded-full bg-[#128C86] text-white">
                   <Icon className="size-6" strokeWidth={1.75} />
                 </span>
@@ -59,6 +56,24 @@ export default function HubPage() {
                 </p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">{product.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{product.copy}</p>
+              </>
+            );
+            const cardClass =
+              "w-full rounded-[1.75rem] bg-white p-6 text-left ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]";
+
+            if (product.ready) {
+              return (
+                <RoleGate key={product.href}>
+                  <button type="button" className={cardClass}>
+                    {card}
+                  </button>
+                </RoleGate>
+              );
+            }
+
+            return (
+              <Link key={product.href} href={product.href} className={cardClass}>
+                {card}
               </Link>
             );
           })}

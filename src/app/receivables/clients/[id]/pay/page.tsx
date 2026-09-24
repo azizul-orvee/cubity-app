@@ -4,9 +4,12 @@ import { clientStatus } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
 import { getClient } from "@/lib/queries";
 import { notFound } from "next/navigation";
+import { receivables } from "@/lib/routes";
+import { redirectUnlessAccountant } from "@/lib/workspace-role";
 
 export default async function PayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await redirectUnlessAccountant(receivables.client(id));
   const client = await getClient(id);
   if (!client) notFound();
   const status = clientStatus(client);

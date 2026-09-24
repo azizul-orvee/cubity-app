@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { PaymentSettingsForm } from "@/components/payment-settings-form";
 import { getPaymentInstructions } from "@/lib/queries";
+import { redirectUnlessAccountant } from "@/lib/workspace-role";
 
 export const metadata: Metadata = {
   title: "Payment details",
 };
 
 export default async function PaymentSettingsPage() {
+  await redirectUnlessAccountant();
   const payment = await getPaymentInstructions();
 
   return (

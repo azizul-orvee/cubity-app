@@ -19,7 +19,13 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  canEdit,
+}: {
+  children: React.ReactNode;
+  canEdit: boolean;
+}) {
   const pathname = usePathname();
   const formScreen = isReceivablesFormPath(pathname);
 
@@ -40,7 +46,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="block text-[13px] font-semibold tracking-[0.14em] text-foreground">
                 CUBITY
               </span>
-              <span className="block text-[11px] text-muted-foreground">Receivables</span>
+              <span className="block text-[11px] text-muted-foreground">
+                {canEdit ? "Receivables" : "Receivables · view only"}
+              </span>
             </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
@@ -56,22 +64,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="flex items-center gap-1">
-            <Button
-              variant={pathname === receivables.settings ? "secondary" : "ghost"}
-              size="icon"
-              className="size-11"
-              asChild
-            >
-              <Link href={receivables.settings} aria-label="Payment details">
-                <Settings className="size-5" />
-              </Link>
-            </Button>
-            <Button className="hidden min-h-10 md:inline-flex" asChild>
-              <Link href={receivables.clientsNew}>
-                <Plus className="size-4" />
-                New client
-              </Link>
-            </Button>
+            {canEdit ? (
+              <>
+                <Button
+                  variant={pathname === receivables.settings ? "secondary" : "ghost"}
+                  size="icon"
+                  className="size-11"
+                  asChild
+                >
+                  <Link href={receivables.settings} aria-label="Payment details">
+                    <Settings className="size-5" />
+                  </Link>
+                </Button>
+                <Button className="hidden min-h-10 md:inline-flex" asChild>
+                  <Link href={receivables.clientsNew}>
+                    <Plus className="size-4" />
+                    New client
+                  </Link>
+                </Button>
+              </>
+            ) : null}
           </div>
         </div>
       </header>
@@ -89,7 +101,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {formScreen ? null : (
       <nav className="app-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-4 px-2 pt-1">
+        <div
+          className={cn(
+            "mx-auto grid max-w-lg px-2 pt-1",
+            canEdit ? "grid-cols-4" : "grid-cols-3",
+          )}
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = isActive(pathname, tab.href);
@@ -116,15 +133,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <FileDown className="size-5" />
             PDF
           </PdfDownload>
-          <Link
-            href={receivables.clientsNew}
-            className="-mt-5 flex flex-col items-center justify-center text-[11px] font-semibold text-primary"
-          >
-            <span className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(46,196,182,0.45)]">
-              <Plus className="size-6" />
-            </span>
-            Add
-          </Link>
+          {canEdit ? (
+            <Link
+              href={receivables.clientsNew}
+              className="-mt-5 flex flex-col items-center justify-center text-[11px] font-semibold text-primary"
+            >
+              <span className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(46,196,182,0.45)]">
+                <Plus className="size-6" />
+              </span>
+              Add
+            </Link>
+          ) : null}
         </div>
       </nav>
       )}

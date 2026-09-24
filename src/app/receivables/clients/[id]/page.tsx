@@ -12,10 +12,11 @@ import { paymentMethodLabel } from "@/lib/company";
 import { formatMoney } from "@/lib/money";
 import { getClient } from "@/lib/queries";
 import { receivables } from "@/lib/routes";
+import { canEditReceivables } from "@/lib/workspace-role";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const client = await getClient(id);
+  const [client, canEdit] = await Promise.all([getClient(id), canEditReceivables()]);
   if (!client) notFound();
 
   const status = clientStatus(client);
@@ -53,13 +54,15 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
               <DueStatusBadge status={status} />
             </div>
           </div>
-          <Link
-            href={receivables.clientEdit(client.id)}
-            className="grid size-12 shrink-0 place-items-center rounded-full bg-white ring-1 ring-border"
-          >
-            <Pencil className="size-4" />
-            <span className="sr-only">Edit</span>
-          </Link>
+          {canEdit ? (
+            <Link
+              href={receivables.clientEdit(client.id)}
+              className="grid size-12 shrink-0 place-items-center rounded-full bg-white ring-1 ring-border"
+            >
+              <Pencil className="size-4" />
+              <span className="sr-only">Edit</span>
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -81,8 +84,12 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <div className="grid grid-cols-2 gap-3">
         <Action href={telHref(client.phone)} icon={<Phone className="size-5" />} label="Call" />
         <Action href={whatsappHref(client.phone, followUp)} icon={<MessageCircle className="size-5" />} label="WhatsApp" external />
-        <Action href={receivables.clientDue(client.id)} icon={<Plus className="size-5" />} label="Add due" primary />
-        <Action href={receivables.clientPay(client.id)} icon={<Wallet className="size-5" />} label="Log payment" />
+        {canEdit ? (
+          <>
+            <Action href={receivables.clientDue(client.id)} icon={<Plus className="size-5" />} label="Add due" primary />
+            <Action href={receivables.clientPay(client.id)} icon={<Wallet className="size-5" />} label="Log payment" />
+          </>
+        ) : null}
       </div>
 
       <PdfDownload
@@ -110,14 +117,16 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </p>
         ) : null}
         {status.outstanding > 0 ? (
-          <div className="mt-5">
-            <PromisedDateForm
-              clientId={client.id}
-              promisedDate={client.nextPromisedDate}
-              promisedAmount={client.nextPromisedAmount}
-              outstanding={status.outstanding}
-            />
-          </div>
+          canEdit ? (
+            <div className="mt-5">
+              <PromisedDateForm
+                clientId={client.id}
+                promisedDate={client.nextPromisedDate}
+                promisedAmount={client.nextPromisedAmount}
+                outstanding={status.outstanding}
+              />
+            </div>
+          ) : null
         ) : (
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">No remaining due.</p>
         )}
@@ -130,7 +139,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         </p>
         {ledger.length === 0 ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
-            No dues yet. Log billed amount, paid now, and the promised date for the rest.
+            No dues yet.
+            {canEdit ? " Log billed amount, paid now, and the promised date for the rest." : ""}
           </p>
         ) : (
           <div className="grid gap-3">
@@ -160,7 +170,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                       {line.due ? `+ ${formatMoney(line.due)}` : `− ${formatMoney(line.paid)}`}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">Bal {formatMoney(line.balance)}</p>
-                    <DeleteEntryButton entryId={line.entry.id} clientId={client.id} />
+                    {canEdit ? (
+                      <DeleteEntryButton entryId={line.entry.id} clientId={client.id} />
+                    ) : null}
                   </div>
                 </div>
               </article>
@@ -209,9 +221,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         </section>
       ) : null}
 
-      <div className="flex justify-center pt-2 pb-4">
-        <DeleteClientButton clientId={client.id} name={client.name} />
-      </div>
+      {canEdit ? (
+        <div className="flex justify-center pt-2 pb-4">
+          <DeleteClientButton clientId={client.id} name={client.name} />
+        </div>
+      ) : null}
     </div>
   );
 }

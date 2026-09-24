@@ -1,0 +1,43 @@
+---
+description: Receivables conventions — accountant/engineer, Tk, routes, mobile-first
+globs: src/app/receivables/**/*,src/lib/routes.ts,src/lib/workspace-role.ts,src/lib/actions.ts,src/lib/money.ts,src/lib/role-actions.ts,src/components/role-gate.tsx,src/components/app-shell.tsx
+alwaysApply: false
+---
+
+# Receivables
+
+Read `docs/APP.md` before changing dues, payments, roles, or PDFs.
+
+## Roles
+
+- Accountant writes. Engineer is view-only.
+- Hide add/edit/delete in the UI when `canEdit` is false.
+- Also block on the server. UI hiding is not enough.
+
+```ts
+// ❌ BAD — engineer can POST this
+export async function addDue(formData: FormData) { /* write */ }
+
+// ✅ GOOD
+const denied = await requireAccountant();
+if (denied) return denied;
+
+// Write routes (new / edit / due / pay / settings):
+await redirectUnlessAccountant(receivables.client(id));
+```
+
+Do not move the accountant password into env, docs, or chat.
+
+## Money and paths
+
+- Store amounts as integer poisha via `src/lib/money.ts`. Show **Tk**, never `$` or `BDT`.
+- Import paths from `@/lib/routes`. Do not hard-code `/receivables/...`.
+
+```ts
+// ❌ href="/receivables/clients/new"
+// ✅ href={receivables.clientsNew}
+```
+
+## UI
+
+Mobile-first: thumb-zone bottom nav, large tap targets, hero money cards. `AppShell` is receivables-only. Hub and other products use `SiteChrome`.

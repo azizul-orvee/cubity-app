@@ -1,7 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ClientForm } from "@/components/client-form";
+import { redirectUnlessAccountant } from "@/lib/workspace-role";
 
-export default function NewClientPage() {
+export default async function NewClientPage() {
+  await redirectUnlessAccountant();
+
   return (
     <div className="mx-auto grid max-w-lg gap-7">
       <div>

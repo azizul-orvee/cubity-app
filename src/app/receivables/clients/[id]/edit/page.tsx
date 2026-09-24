@@ -2,9 +2,12 @@ import { notFound } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientForm } from "@/components/client-form";
 import { getClient } from "@/lib/queries";
+import { receivables } from "@/lib/routes";
+import { redirectUnlessAccountant } from "@/lib/workspace-role";
 
 export default async function EditClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await redirectUnlessAccountant(receivables.client(id));
   const client = await getClient(id);
   if (!client) notFound();
 

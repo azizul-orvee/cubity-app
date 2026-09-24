@@ -18,9 +18,10 @@ import { AGING_COLORS, AGING_LABELS, type AgingKey } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
 import { getDashboardData } from "@/lib/queries";
 import { receivables } from "@/lib/routes";
+import { canEditReceivables } from "@/lib/workspace-role";
 
 export default async function HomePage() {
-  const { snapshot } = await getDashboardData();
+  const [{ snapshot }, canEdit] = await Promise.all([getDashboardData(), canEditReceivables()]);
   const collectionRate =
     snapshot.billedThisMonth > 0 ? snapshot.collectedThisMonth / snapshot.billedThisMonth : 0;
   const overdueShare =
@@ -51,12 +52,14 @@ export default async function HomePage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">What Cubity still has to collect.</p>
         </div>
-        <Button className="hidden min-h-11 md:inline-flex" asChild>
-          <Link href={receivables.clientsNew}>
-            <Plus className="size-4" />
-            Client
-          </Link>
-        </Button>
+        {canEdit ? (
+          <Button className="hidden min-h-11 md:inline-flex" asChild>
+            <Link href={receivables.clientsNew}>
+              <Plus className="size-4" />
+              Client
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#128C86] via-[#2EC4B6] to-[#7DD3FC] p-5 text-white shadow-[0_18px_40px_rgba(18,140,134,0.28)]">
@@ -211,7 +214,7 @@ export default async function HomePage() {
         />
       </section>
 
-      {snapshot.clientCount === 0 ? (
+      {snapshot.clientCount === 0 && canEdit ? (
         <div className="rounded-3xl border border-dashed border-primary/30 bg-white/70 p-6 text-center">
           <Wallet className="mx-auto size-8 text-primary" />
           <h2 className="mt-3 text-lg font-semibold">Add the first client</h2>

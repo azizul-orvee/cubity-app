@@ -9,6 +9,7 @@ import { totals } from "@/lib/ledger";
 import { parseAmountToPoisha } from "@/lib/money";
 import { DEFAULT_PAYMENT } from "@/lib/company";
 import { receivables } from "@/lib/routes";
+import { requireAccountant } from "@/lib/workspace-role";
 
 const optionalText = z
   .string()
@@ -57,6 +58,9 @@ function revalidateClient(id?: string) {
 }
 
 export async function createClient(formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   const parsed = clientSchema.safeParse({
     name: formString(formData, "name"),
     phone: formString(formData, "phone"),
@@ -77,6 +81,9 @@ export async function createClient(formData: FormData) {
 }
 
 export async function updateClient(clientId: string, formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   const parsed = clientSchema.safeParse({
     name: formString(formData, "name"),
     phone: formString(formData, "phone"),
@@ -100,12 +107,18 @@ export async function updateClient(clientId: string, formData: FormData) {
 }
 
 export async function deleteClient(clientId: string) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   await prisma.client.delete({ where: { id: clientId } });
   revalidateClient();
   redirect(receivables.clients);
 }
 
 export async function recordSiteVisit(clientId: string, formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   const billed = parseAmountToPoisha(formString(formData, "billed"));
   const receivedRaw = formString(formData, "received");
   const received = receivedRaw.trim() ? parseAmountToPoisha(receivedRaw) : 0;
@@ -183,6 +196,9 @@ export async function recordSiteVisit(clientId: string, formData: FormData) {
 }
 
 export async function recordPayment(clientId: string, formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   const amount = parseAmountToPoisha(formString(formData, "amount"));
   const date = parseDateInput(formString(formData, "date"));
   const promisedDate = parseDateInput(formString(formData, "promisedDate"));
@@ -241,6 +257,9 @@ export async function recordPayment(clientId: string, formData: FormData) {
 }
 
 export async function updatePromisedDate(clientId: string, formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   const promisedDate = parseDateInput(formString(formData, "promisedDate"));
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -286,6 +305,9 @@ const paymentSchema = z.object({
 });
 
 export async function updatePaymentInstructions(formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   const parsed = paymentSchema.safeParse({
     bkashNumber: formString(formData, "bkashNumber"),
     bankAccountName: formString(formData, "bankAccountName"),
@@ -311,6 +333,9 @@ export async function updatePaymentInstructions(formData: FormData) {
 }
 
 export async function deleteEntry(entryId: string, clientId: string) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
   await prisma.ledgerEntry.delete({ where: { id: entryId } });
 
   const client = await prisma.client.findUnique({
