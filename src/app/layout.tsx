@@ -36,8 +36,6 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
-export const dynamic = "force-dynamic";
-
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

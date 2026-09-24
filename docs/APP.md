@@ -80,7 +80,7 @@ The chosen role is stored in an httpOnly cookie for 30 days. Click Receivables o
 - Required: name, phone
 - Optional on add: email, address
 - Company, site/project, and notes can be filled later on edit
-- Call (`tel:`) on the profile. WhatsApp attaches that client's due-statement PDF and sends no text. Bangladesh `01…` numbers open that contact's chat.
+- Call (`tel:`) and WhatsApp on the profile. WhatsApp opens that client's chat with the message "Assalamualaikum" and nothing else. Bangladesh `01…` numbers are sent as `880…`.
 
 ### Dues and payments
 
@@ -110,7 +110,7 @@ Mobile-first visual summary (not a table dump):
 
 Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, accountant only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the accountant. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
 
-Opening Clients (or a client account) from Home shows the **Cubity seal appearing** while the database catches up: paint-in, bloom from the cube, or rise from the bottom — one of the three at random. Same on the website and in the Android app.
+Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. Same on the website and in the Android app. Receivables runs in Singapore, next to the Neon database.
 
 ### PDFs
 
@@ -125,7 +125,7 @@ These exist because construction collections usually fail on follow-up, not on t
 
 - Overdue and upcoming-promise queues
 - Aging buckets so old money is obvious
-- Call from the profile, and WhatsApp with the due-statement PDF attached and no text
+- Call and WhatsApp from the profile. WhatsApp's message is only "Assalamualaikum".
 - Site/project on the client
 - Payment method tracking
 - Company-wide PDF
@@ -153,7 +153,7 @@ Local: copy `.env.example` to `.env` / `.env.local` and paste your Neon URLs. `n
 
 ## Android APK
 
-There is a native-looking Android wrapper in `android/`. It is a fullscreen WebView of the live site with a **fixed teal status bar**, Cubity splash and icon, and no Chrome address bar. The page cannot pan sideways. Call opens the phone app. WhatsApp opens with the client's due-statement PDF attached and no message. PDF downloads go to Downloads. The WhatsApp attachment needs a new `dist/Cubity.apk` (the shell gained a share bridge). Screens and the new filename still update from the website without a new APK.
+There is a native-looking Android wrapper in `android/`. It is a fullscreen WebView of the live site with a **fixed teal status bar**, Cubity splash and icon, and no Chrome address bar. The page cannot pan sideways. Call / WhatsApp open the real phone apps. PDF statements go to Downloads.
 
 The built file is **`dist/Cubity.apk`** (install from Files / a share; allow unknown sources). Needs internet. It is not on Play Store.
 
@@ -198,7 +198,9 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 ## Changelog
 
-- 2026-09-25 — Named client due statements `Name-due-statement.pdf`. The WhatsApp button now attaches that PDF only, with no text. The Android app needs a new APK so WhatsApp opens with the file.
+- 2026-09-25 — Stopped holding every screen for 1.4 seconds behind the Cubity seal, and run Receivables in Singapore next to the database so pages wait on a shorter query.
+- 2026-09-25 — WhatsApp on a client opens the chat with only "Assalamualaikum". The long follow-up text and the PDF attachment attempt are gone.
+- 2026-09-25 — Named client due statements `Name-due-statement.pdf`.
 - 2026-09-25 — Told every assistant not to change the database unless you confirm first. Local dev uses the production Neon database.
 - 2026-09-25 — Kept Overdue and Coming up amounts and status badges inside the card on the phone. Long client names now truncate instead of pushing the money off the right edge.
 - 2026-09-25 — Fixed the Vercel build. Delete, promised-date, and payment-settings actions were returning a type the form actions cannot use, so the production deploy failed typechecking.

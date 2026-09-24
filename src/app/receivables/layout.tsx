@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: "Receivables",
 };
 
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 export default async function ReceivablesLayout({ children }: { children: ReactNode }) {
   const role = await getWorkspaceRole();
   if (!role) {

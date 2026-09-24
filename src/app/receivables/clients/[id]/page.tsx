@@ -4,11 +4,10 @@ import { notFound } from "next/navigation";
 import { FileDown, MessageCircle, Pencil, Phone, Plus, Wallet } from "lucide-react";
 import { DeleteClientButton, DeleteEntryButton } from "@/components/delete-buttons";
 import { PdfDownload } from "@/components/pdf-download";
-import { WhatsAppStatementButton } from "@/components/whatsapp-statement-button";
 import { DueStatusBadge } from "@/components/due-status-badge";
 import { PromisedDateForm } from "@/components/promised-date-form";
 import { formatDate } from "@/lib/dates";
-import { clientStatus, runningLedger, telHref } from "@/lib/ledger";
+import { clientStatus, runningLedger, telHref, whatsappHref } from "@/lib/ledger";
 import { paymentMethodLabel } from "@/lib/company";
 import { formatMoney } from "@/lib/money";
 import { getClient } from "@/lib/queries";
@@ -75,14 +74,12 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
       <div className="grid grid-cols-2 gap-3">
         <Action href={telHref(client.phone)} icon={<Phone className="size-5" />} label="Call" />
-        <WhatsAppStatementButton
-          href={receivables.clientStatement(client.id)}
-          phone={client.phone}
-          className="flex min-h-[5rem] flex-col items-center justify-center gap-2 rounded-[1.35rem] bg-white text-sm font-semibold ring-1 ring-border"
-        >
-          <MessageCircle className="size-5" />
-          WhatsApp
-        </WhatsAppStatementButton>
+        <Action
+          href={whatsappHref(client.phone, "Assalamualaikum")}
+          icon={<MessageCircle className="size-5" />}
+          label="WhatsApp"
+          external
+        />
         {canEdit ? (
           <>
             <Action href={receivables.clientDue(client.id)} icon={<Plus className="size-5" />} label="Add due" primary />

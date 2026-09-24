@@ -1,20 +1,21 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { DEFAULT_PAYMENT, type PaymentInstructions } from "@/lib/company";
 import { clientStatus, companySnapshot, type ClientWithEntries } from "@/lib/ledger";
 
-export async function getClients() {
+export const getClients = cache(async () => {
   return prisma.client.findMany({
     include: { entries: true },
     orderBy: { name: "asc" },
   });
-}
+});
 
-export async function getClient(id: string) {
+export const getClient = cache(async (id: string) => {
   return prisma.client.findUnique({
     where: { id },
     include: { entries: true },
   });
-}
+});
 
 export async function getDashboardData() {
   const clients = await getClients();

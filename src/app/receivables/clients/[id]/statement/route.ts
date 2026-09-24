@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { getClient, getPaymentInstructions } from "@/lib/queries";
 import { buildClientStatementPdf } from "@/lib/pdf";
 
+export const preferredRegion = "sin1";
+
 function clientPdfFilename(name: string) {
   const slug = name
     .trim()
