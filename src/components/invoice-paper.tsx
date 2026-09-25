@@ -4,6 +4,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { COMPANY, companyAddressLine, companyPhoneLine, type PaymentInstructions } from "@/lib/company";
 import type { InvoicePdfData } from "@/lib/pdf";
 import { formatMoney } from "@/lib/money";
+import { PaymentSeal } from "@/components/payment-seal";
 
 /** The invoice on screen, laid out like the downloaded PDF. */
 export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; payment: PaymentInstructions }) {
@@ -76,8 +77,9 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
           </tbody>
         </table>
 
-        <div className="mt-2 border-t border-[#c7d6d6] pt-3">
-          <dl className="ml-auto grid max-w-60 gap-1.5 text-[13px]">
+        <div className="mt-4 flex items-end justify-between gap-4 border-t border-[#c7d6d6] pt-4">
+          <PaymentSeal paidAmount={invoice.paidAmount} total={total} />
+          <dl className="grid max-w-60 gap-1.5 text-[13px]">
             <div className="flex justify-between gap-4">
               <dt className="text-[#475257]">Billed</dt>
               <dd className="tabular-nums">{formatMoney(total)}</dd>

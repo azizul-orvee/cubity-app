@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPaymentInstructions } from "@/lib/queries";
-import { getInvoice } from "@/lib/invoice-queries";
+import { getInvoice, invoicePdfFilename, invoiceTotal } from "@/lib/invoice-queries";
 import { buildInvoicePdf } from "@/lib/pdf";
 
 export const preferredRegion = "sin1";
@@ -11,7 +11,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!invoice) notFound();
 
   const pdf = await buildInvoicePdf(invoice, await getPaymentInstructions());
-  const filename = `${invoice.number}.pdf`;
+  const filename = invoicePdfFilename(invoice.number, invoice.paidAmount, invoiceTotal(invoice.lines));
 
   return new Response(Buffer.from(pdf), {
     headers: {

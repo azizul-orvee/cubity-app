@@ -30,3 +30,22 @@ export function invoiceTotal(lines: { amount: number }[]) {
 export function invoiceDue(invoice: { paidAmount: number; lines: { amount: number }[] }) {
   return invoiceTotal(invoice.lines) - invoice.paidAmount;
 }
+
+export type InvoicePayStatus = "paid" | "unpaid" | "partial";
+
+export function invoicePayStatus(paidAmount: number, total: number): InvoicePayStatus {
+  if (total <= 0 || paidAmount <= 0) return "unpaid";
+  if (paidAmount >= total) return "paid";
+  return "partial";
+}
+
+export function invoicePayFileLabel(status: InvoicePayStatus) {
+  if (status === "paid") return "Paid";
+  if (status === "partial") return "PartialPaid";
+  return "Unpaid";
+}
+
+export function invoicePdfFilename(number: string, paidAmount: number, total: number) {
+  const label = invoicePayFileLabel(invoicePayStatus(paidAmount, total));
+  return `Invoice-${number}-${label}.pdf`;
+}

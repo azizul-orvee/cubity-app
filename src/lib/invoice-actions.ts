@@ -56,7 +56,7 @@ function readLines(formData: FormData) {
   return { lines };
 }
 
-/** Invoice ID: capital letters and numbers, optionally joined by single hyphens, e.g. CUB-2026-014. */
+/** Invoice ID: capital letters and numbers, optionally joined by single hyphens, e.g. CC420-2509-C01. */
 const INVOICE_ID = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
 
 function readInvoiceId(formData: FormData) {
@@ -64,7 +64,7 @@ function readInvoiceId(formData: FormData) {
   if (!number) return { error: "Enter an invoice ID." };
   if (number.length > 40) return { error: "Invoice ID is too long. Keep it under 40 characters." };
   if (!INVOICE_ID.test(number)) {
-    return { error: "Invoice ID can only use capital letters, numbers, and hyphens, like CUB-2026-014." };
+    return { error: "Invoice ID can only use capital letters, numbers, and hyphens, like CC420-2509-C01." };
   }
   return { number };
 }

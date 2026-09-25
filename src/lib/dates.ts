@@ -6,6 +6,13 @@ export function todayInputValue() {
   return new Date().toLocaleDateString("en-CA", { timeZone: DHAKA_TZ });
 }
 
+/** Day and month as four digits, e.g. 25 September → 2509. */
+export function invoiceDateCode(isoDate: string) {
+  const [, month, day] = isoDate.split("-");
+  if (!month || !day) return "";
+  return `${day}${month}`;
+}
+
 export function parseDateInput(value: string) {
   if (!value) return null;
   return new Date(`${value}T12:00:00.000Z`);

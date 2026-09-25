@@ -21,6 +21,7 @@ import {
 import { COMPANY, companyAddressLine, companyPhoneLine, paymentMethodLabel, type PaymentInstructions } from "@/lib/company";
 import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, type ClientWithEntries } from "@/lib/ledger";
+import { invoicePayStatus } from "@/lib/invoice-queries";
 import { formatMoneyPdf } from "@/lib/money";
 
 export type InvoicePdfData = {
@@ -43,6 +44,8 @@ const FOOTER = rgb(0.16, 0.2, 0.22);
 const HAIR = rgb(0.78, 0.84, 0.84);
 const WASH = rgb(0.96, 0.98, 0.98);
 const RED = rgb(0.68, 0.1, 0.14);
+const SEAL_GREEN = rgb(0.106, 0.478, 0.227);
+const SEAL_AMBER = rgb(0.706, 0.325, 0.035);
 const WHITE = rgb(1, 1, 1);
 const BKASH = rgb(0.886, 0.075, 0.431);
 const NRB = rgb(0.043, 0.31, 0.22);
@@ -821,6 +824,51 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
   return pdf.save();
 }
 
+function roundedRectPath(width: number, height: number, radius: number) {
+  const r = Math.min(radius, width / 2, height / 2);
+  return [
+    `M ${r} 0`,
+    `H ${width - r}`,
+    `Q ${width} 0 ${width} ${r}`,
+    `V ${height - r}`,
+    `Q ${width} ${height} ${width - r} ${height}`,
+    `H ${r}`,
+    `Q 0 ${height} 0 ${height - r}`,
+    `V ${r}`,
+    `Q 0 0 ${r} 0`,
+    "Z",
+  ].join(" ");
+}
+
+function drawPaymentSeal(page: PDFPage, x: number, top: number, bold: PDFFont, paidAmount: number, total: number) {
+  const status = invoicePayStatus(paidAmount, total);
+  const color = status === "paid" ? SEAL_GREEN : status === "partial" ? SEAL_AMBER : RED;
+  const word = status === "paid" ? "PAID" : status === "partial" ? "PARTIAL" : "UNPAID";
+  const size = 18;
+  const textWidth = bold.widthOfTextAtSize(word, size);
+  const boxWidth = Math.max(128, textWidth + 28);
+  const boxHeight = 40;
+  page.drawSvgPath(roundedRectPath(boxWidth, boxHeight, 12), {
+    x,
+    y: top,
+    borderColor: color,
+    borderWidth: 2.2,
+  });
+  const cubity = "CUBITY";
+  const cubitySize = 7;
+  const cubityWidth = bold.widthOfTextAtSize(cubity, cubitySize);
+  const cubityX = x + boxWidth - cubityWidth - 12;
+  page.drawRectangle({
+    x: cubityX - 3,
+    y: top - 4,
+    width: cubityWidth + 6,
+    height: 9,
+    color: WHITE,
+  });
+  drawText(page, cubity, cubityX, top - 2, bold, cubitySize, color);
+  drawText(page, word, x + (boxWidth - textWidth) / 2, top - boxHeight + 13, bold, size, color);
+}
+
 export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentInstructions) {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -960,6 +1008,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   y -= 18;
   drawRight(page, "Total due", amountRight - 90, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(due), amountRight, y, bold, 13, RED);
+  drawPaymentSeal(page, MARGIN, y + 34, bold, invoice.paidAmount, total);
 
   y -= 32;
   if (invoice.notes) {

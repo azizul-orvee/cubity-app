@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState, type FocusEvent, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import type { Invoice, InvoiceLine } from "@prisma/client";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { saveInvoice } from "@/lib/invoice-actions";
 import { loadInvoiceServices, type CatalogService } from "@/lib/invoice-catalog";
-import { todayInputValue, toInputValue } from "@/lib/dates";
+import { invoiceDateCode, todayInputValue, toInputValue } from "@/lib/dates";
 import { formatMoney, poishaToInput } from "@/lib/money";
 import { invoices } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,16 @@ function digitsOnly(value: string) {
 
 function cleanInvoiceId(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+}
+
+function cleanIdPart(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function splitInvoiceId(number: string) {
+  const match = number.toUpperCase().match(/^([A-Z0-9]+)-(\d{4})-([A-Z0-9]+)$/);
+  if (!match) return null;
+  return { prefix: match[1], code: match[2], suffix: match[3] };
 }
 
 function revealField(event: FocusEvent<HTMLElement>) {
@@ -64,7 +74,28 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [justSelected, setJustSelected] = useState<string | null>(null);
   const [paid, setPaid] = useState(invoice ? poishaToInput(invoice.paidAmount) : "");
+  const savedParts = invoice ? splitInvoiceId(invoice.number) : null;
+  const legacyId = Boolean(invoice && !savedParts);
   const [invoiceId, setInvoiceId] = useState(invoice?.number ?? "");
+  const [prefix, setPrefix] = useState(savedParts?.prefix ?? "CC420");
+  const [suffix, setSuffix] = useState(savedParts?.suffix ?? "C01");
+  const [issueDate, setIssueDate] = useState(invoice ? toInputValue(invoice.issueDate) : todayInputValue());
+  const [dateTouched, setDateTouched] = useState(false);
+  const todayRef = useRef(todayInputValue());
+  const dateCode = !invoice || dateTouched ? invoiceDateCode(issueDate) : (savedParts?.code ?? invoiceDateCode(issueDate));
+  const composedId = `${prefix}-${dateCode}-${suffix}`;
+
+  useEffect(() => {
+    if (invoice) return;
+    const timer = window.setInterval(() => {
+      const next = todayInputValue();
+      const previous = todayRef.current;
+      todayRef.current = next;
+      if (next === previous) return;
+      setIssueDate((current) => (current === previous ? next : current));
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [invoice]);
 
   useEffect(() => {
     const catalog = loadInvoiceServices();
@@ -116,28 +147,75 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
     <form action={formAction} className="grid grid-cols-1 gap-5">
       <Section title="Invoice" hint="The invoice ID is printed on the PDF and used as its file name.">
         <div className="grid gap-2.5">
-          <Label htmlFor="number" className="text-base">
+          <Label htmlFor="invoice-prefix" className="text-base">
             Invoice ID
           </Label>
-          <Input
-            id="number"
-            name="number"
-            required
-            autoCapitalize="characters"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="next"
-            maxLength={40}
-            pattern="[A-Z0-9]+(-[A-Z0-9]+)*"
-            title="Capital letters, numbers, and hyphens, like CUB-2026-014"
-            placeholder="e.g. CUB-2026-014"
-            value={invoiceId}
-            onChange={(event) => setInvoiceId(cleanInvoiceId(event.target.value))}
-            className={cn(fieldClass, "font-semibold tracking-wide")}
-            onFocus={revealField}
-          />
-          <p className="text-sm text-muted-foreground">Capital letters, numbers, and hyphens only.</p>
+          {legacyId ? (
+            <Input
+              id="number"
+              name="number"
+              required
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="next"
+              maxLength={40}
+              pattern="[A-Z0-9]+(-[A-Z0-9]+)*"
+              title="Capital letters, numbers, and hyphens"
+              value={invoiceId}
+              onChange={(event) => setInvoiceId(cleanInvoiceId(event.target.value))}
+              className={cn(fieldClass, "font-semibold tracking-wide")}
+              onFocus={revealField}
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <Input
+                  id="invoice-prefix"
+                  required
+                  aria-label="Invoice ID start"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  maxLength={16}
+                  value={prefix}
+                  onChange={(event) => setPrefix(cleanIdPart(event.target.value))}
+                  className={cn(fieldClass, "font-semibold tracking-wide")}
+                  onFocus={revealField}
+                />
+                <Input
+                  readOnly
+                  tabIndex={-1}
+                  aria-label="Date and month"
+                  value={dateCode}
+                  className={cn(fieldClass, "w-[5.5rem] text-center font-semibold tracking-wide text-muted-foreground")}
+                />
+                <Input
+                  required
+                  aria-label="Invoice ID end"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  maxLength={16}
+                  value={suffix}
+                  onChange={(event) => setSuffix(cleanIdPart(event.target.value))}
+                  className={cn(fieldClass, "font-semibold tracking-wide")}
+                  onFocus={revealField}
+                />
+              </div>
+              <input type="hidden" name="number" value={composedId} />
+            </>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {legacyId
+              ? "Capital letters, numbers, and hyphens only."
+              : `${composedId}. The middle is the date and month. Change the start and end if you need to.`}
+          </p>
         </div>
         <div className="grid gap-2.5">
           <Label htmlFor="issueDate" className="text-base">
@@ -148,7 +226,11 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
             name="issueDate"
             type="date"
             required
-            defaultValue={invoice ? toInputValue(invoice.issueDate) : todayInputValue()}
+            value={issueDate}
+            onChange={(event) => {
+              setDateTouched(true);
+              setIssueDate(event.target.value);
+            }}
             className={fieldClass}
             onFocus={revealField}
           />

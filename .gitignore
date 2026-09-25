@@ -56,3 +56,8 @@ next-env.d.ts
 /android/app/*.jks
 /android/app/*.keystore
 /dist/
+
+# iOS wrapper
+/ios/DerivedData/
+**/xcuserdata/
+*.xcuserstate

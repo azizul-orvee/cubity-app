@@ -74,7 +74,12 @@ export default async function HubPage() {
             }
 
             return (
-              <Link key={product.href} href={product.href} className={cardClass}>
+              <Link
+                key={product.href}
+                href={product.href}
+                prefetch={product.href === invoices.root ? false : undefined}
+                className={cardClass}
+              >
                 {card}
               </Link>
             );

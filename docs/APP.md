@@ -49,9 +49,9 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
 | `/invoices` | Every invoice, newest first, grouped by the day it was created (Today, Yesterday, then the date). Search by client or invoice number. Bottom nav: Invoices, Services, and New. No accountant gate. |
 | `/invoices/new` | New invoice in cards: Invoice (required invoice ID, issue date), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (paid now with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills it from another invoice (ID left blank, paid resets, date is today) and saves as a new invoice |
-| `/invoices/[id]` | The invoice shown like the PDF (letterhead, billed to, amount due, particulars, totals, notes, payment instructions, office footer). Buttons: Edit, New from this, Download. Delete sits below and asks for confirmation first |
+| `/invoices/[id]` | The invoice shown like the PDF (letterhead, billed to, amount due, particulars, totals, a paid / partial / unpaid Cubity seal, notes, payment instructions, office footer). Buttons: Edit, New from this, Download. Delete sits below and asks for confirmation first |
 | `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts |
-| `/invoices/[id]/pdf` | Download that invoice PDF, named after its invoice ID (e.g. `CUB-2026-014.pdf`). The ID is printed under INVOICE in the letterhead |
+| `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. The same seal is printed beside the totals. The ID is printed under INVOICE in the letterhead |
 | `/invoices/services` | Add a service at the top, then rename or remove each one in the list (remove shows Undo). The list stays on this phone. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
@@ -122,7 +122,7 @@ Opening Clients (or a client account) from Home shows the **Cubity seal** only w
 - Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance), a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
 - Payment details are edited at `/receivables/settings` (gear in the receivables header). Defaults: bKash `01973 914236`; NRB Bank, Sylhet Main Branch, MD TAREK AHMED, A/C `7087010002828`, routing `290913794`.
 - Company **outstanding receivables** list with office address and phones
-- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. Particulars are the selected services. File name includes the client and invoice number.
+- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. A Cubity seal says PAID, PARTIAL, or UNPAID from the paid amount. Particulars are the selected services. File name is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`.
 - Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
 ### Extra (beyond the original request)
@@ -185,6 +185,20 @@ adb install -r dist/Cubity.apk
 adb shell am start -n com.cubity.receivables/.MainActivity
 ```
 
+## iPhone app
+
+There is the same kind of wrapper in `ios/`. It is a fullscreen in-app browser of the live site: teal status bar, Cubity splash and icon, no Safari address bar. The page cannot pan sideways. Call and WhatsApp open the real phone apps. A PDF statement opens the iPhone share sheet so it can be saved to Files.
+
+It always loads `https://cubity-app.vercel.app/`. Screens and data still update from Vercel. A new install is only needed when the iPhone shell itself changes.
+
+This Mac does not have Xcode, only the command-line tools, so the app cannot be built here yet. Apple also does not allow a loose install file the way Android allows `dist/Cubity.apk`.
+
+1. Install **Xcode** from the Mac App Store, then open `ios/Cubity.xcodeproj`.
+2. Plug in the iPhone, pick it as the run destination, and set your Apple ID under Signing (a free account works; the install lasts about 7 days).
+3. Press Run. The first launch on the phone needs Settings → General → VPN & Device Management → trust the developer.
+
+A paid Apple Developer account is only needed for TestFlight or the App Store. Apple often rejects a pure website wrapper from the store.
+
 ## Agent rules
 
 Cursor always applies:
@@ -221,6 +235,10 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-25 — Invoices show a Cubity seal for paid, partial, or unpaid, on the screen and in the PDF. The downloaded file is named `Invoice-{ID}-Paid`, `Unpaid`, or `PartialPaid`.
+- 2026-09-25 — New invoices start as `CC420-2509-C01`. The middle four digits are the date and month (25 September → 2509) and follow the issue date. The start and end are filled in and can be changed.
+- 2026-09-25 — Opening Invoice maker from the workspace no longer waits on the invoice list. The Invoices screen appears immediately, and the list fills in after the database query.
+- 2026-09-25 — Added an iPhone wrapper in `ios/` that opens the live site fullscreen, matching the Android app: teal status bar, Cubity splash and icon, call and WhatsApp, and PDF share. It needs Xcode to install; there is no sideload file.
 - 2026-09-25 — Invoice ID is now typed in (required, unique, capital letters / numbers / hyphens, e.g. CUB-2026-014) instead of auto-numbered. It names the PDF file and is printed as "Invoice ID" in the PDF letterhead.
 - 2026-09-25 — Invoice list now only lists invoices grouped by the day they were created (no totals card or filters). Invoice detail shows the invoice like the PDF, with Edit, New from this, and Download; Call and WhatsApp were removed.
 - 2026-09-25 — Restyled the invoice maker to match Receivables: same teal cards, avatars, badges, and bottom nav, plus search, filters, a sticky due bar, and quick paid amounts. No change to data, validation, or the PDF.
