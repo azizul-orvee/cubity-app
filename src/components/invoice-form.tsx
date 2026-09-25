@@ -73,7 +73,9 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
   const [selected, setSelected] = useState<string[]>([]);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [justSelected, setJustSelected] = useState<string | null>(null);
-  const [paid, setPaid] = useState(invoice ? poishaToInput(invoice.paidAmount) : "");
+  const [paid, setPaid] = useState("");
+  const [paidDateTouched, setPaidDateTouched] = useState(false);
+  const [paidDate, setPaidDate] = useState("");
   const savedParts = invoice ? splitInvoiceId(invoice.number) : null;
   const legacyId = Boolean(invoice && !savedParts);
   const [invoiceId, setInvoiceId] = useState(invoice?.number ?? "");
@@ -127,9 +129,11 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
     return sum + (Number.isFinite(taka) ? taka * 100 : 0);
   }, 0);
   const paidTaka = Number.parseInt(paid, 10);
-  const paidAmount = Number.isFinite(paidTaka) ? paidTaka * 100 : 0;
+  const enteredPaid = Number.isFinite(paidTaka) ? paidTaka * 100 : 0;
+  const paidAmount = invoice ? invoice.paidAmount : enteredPaid;
   const due = total - paidAmount;
-  const overpaid = total > 0 && paidAmount > total;
+  const overpaid = invoice ? total > 0 && invoice.paidAmount > total : total > 0 && enteredPaid > total;
+  const paymentDate = paidDateTouched ? paidDate : issueDate;
   const totalTaka = Math.floor(total / 100);
 
   const paidPresets: { label: string; value: string | null }[] = [
@@ -375,51 +379,86 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
         )}
       </Section>
 
-      <Section title="Payment" hint="How much the client has already paid.">
-        <div className="grid gap-2.5">
-          <Label htmlFor="paid" className="text-base">
-            Paid now <Optional />
-          </Label>
-          <Input
-            id="paid"
-            name="paid"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            placeholder="0"
-            value={paid}
-            onChange={(event) => setPaid(digitsOnly(event.target.value))}
-            aria-invalid={overpaid || undefined}
-            className={fieldClass}
-            onFocus={revealField}
-          />
-          <div className="flex flex-wrap gap-2 pt-1">
-            {paidPresets.map((preset) => {
-              const value = preset.value;
-              const active = value !== null && paid === value;
-              return (
-                <button
-                  key={preset.label}
-                  type="button"
-                  disabled={value === null}
-                  aria-pressed={active}
-                  onClick={() => value !== null && setPaid(value)}
-                  className={
-                    active
-                      ? "inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
-                      : "inline-flex min-h-11 items-center rounded-full bg-white px-5 text-sm font-medium text-muted-foreground ring-1 ring-border disabled:opacity-40"
-                  }
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-          </div>
-          <p className={cn("text-sm", overpaid ? "text-destructive" : "text-muted-foreground")}>
-            {overpaid ? "Paid amount is higher than the invoice total." : "Leave blank if nothing has been paid yet."}
+      {invoice ? (
+        <Section title="Payments" hint="Each receipt stays on the invoice, with its date. Add the next one from the invoice page.">
+          <p className="text-base">
+            Paid so far{" "}
+            <span className="font-semibold tabular-nums">{formatMoney(invoice.paidAmount)}</span>
           </p>
-        </div>
-      </Section>
+          {overpaid ? (
+            <p className="text-sm text-destructive">
+              Payments already recorded are higher than this total. Remove a payment on the invoice first.
+            </p>
+          ) : (
+            <Link href={invoices.invoice(invoice.id)} className="text-sm font-medium text-primary">
+              Record another payment
+            </Link>
+          )}
+        </Section>
+      ) : (
+        <Section title="Payment" hint="The first payment, if they have already paid something. Later payments are added on the invoice, each with its date.">
+          <div className="grid gap-2.5">
+            <Label htmlFor="paid" className="text-base">
+              Already paid <Optional />
+            </Label>
+            <Input
+              id="paid"
+              name="paid"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              placeholder="0"
+              value={paid}
+              onChange={(event) => setPaid(digitsOnly(event.target.value))}
+              aria-invalid={overpaid || undefined}
+              className={fieldClass}
+              onFocus={revealField}
+            />
+            <div className="flex flex-wrap gap-2 pt-1">
+              {paidPresets.map((preset) => {
+                const value = preset.value;
+                const active = value !== null && paid === value;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    disabled={value === null}
+                    aria-pressed={active}
+                    onClick={() => value !== null && setPaid(value)}
+                    className={
+                      active
+                        ? "inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground"
+                        : "inline-flex min-h-11 items-center rounded-full bg-white px-5 text-sm font-medium text-muted-foreground ring-1 ring-border disabled:opacity-40"
+                    }
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={cn("text-sm", overpaid ? "text-destructive" : "text-muted-foreground")}>
+              {overpaid ? "Paid amount is higher than the invoice total." : "Leave blank if nothing has been paid yet."}
+            </p>
+          </div>
+          <div className="grid gap-2.5">
+            <Label htmlFor="paidDate" className="text-base">
+              Payment date
+            </Label>
+            <Input
+              id="paidDate"
+              name="paidDate"
+              type="date"
+              value={paymentDate}
+              onChange={(event) => {
+                setPaidDateTouched(true);
+                setPaidDate(event.target.value);
+              }}
+              className={fieldClass}
+              onFocus={revealField}
+            />
+          </div>
+        </Section>
+      )}
 
       <Section title="Notes">
         <div className="grid gap-2.5">
@@ -449,8 +488,10 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
             <p className="text-2xl leading-tight font-semibold tabular-nums tracking-tight text-[#0F766E]">
               {formatMoney(Math.max(due, 0))}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {formatMoney(total)} billed
+            <p className={cn("truncate text-xs", overpaid ? "text-destructive" : "text-muted-foreground")}>
+              {overpaid && invoice
+                ? "Total is below the payments already recorded."
+                : `${formatMoney(total)} billed`}
             </p>
           </div>
           <SubmitButton className="h-14 shrink-0 rounded-2xl px-6 text-base md:h-14">

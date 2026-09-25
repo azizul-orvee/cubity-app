@@ -34,6 +34,7 @@ export type InvoicePdfData = {
   notes: string | null;
   paidAmount: number;
   lines: { serviceName: string; amount: number }[];
+  payments: { date: Date; amount: number }[];
 };
 
 const TEAL = rgb(0.14, 0.52, 0.52);
@@ -878,6 +879,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   const nrbLogo = await loadPng(pdf, "nrb-mark.png");
   const total = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
   const due = total - invoice.paidAmount;
+  const payments = [...invoice.payments].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   let page = pdf.addPage([PAGE.width, PAGE.height]);
   let { width, height } = page.getSize();
@@ -906,7 +908,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   }
 
   const boxWidth = 232;
-  const boxHeight = 108;
+  const boxHeight = 108 + payments.length * 14;
   const box = {
     x: width - MARGIN - boxWidth,
     width: boxWidth,
@@ -932,6 +934,11 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   boxY -= 14;
   drawText(page, "Billed", innerLeft, boxY, regular, 9, MUTED);
   drawRight(page, formatMoneyPdf(total), innerRight, boxY, regular, 9, INK);
+  for (const payment of payments) {
+    boxY -= 14;
+    drawText(page, format(payment.date, "dd MMM yyyy"), innerLeft, boxY, regular, 9, MUTED);
+    drawRight(page, formatMoneyPdf(payment.amount), innerRight, boxY, regular, 9, INK);
+  }
   boxY -= 14;
   drawText(page, "Paid", innerLeft, boxY, regular, 9, MUTED);
   drawRight(page, formatMoneyPdf(invoice.paidAmount), innerRight, boxY, regular, 9, INK);
@@ -992,6 +999,14 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     y -= rowHeight;
   }
 
+  const totalsHeight = 70 + (payments.length > 0 ? 18 + payments.length * 14 : 0);
+  if (y < 80 + totalsHeight) {
+    page = pdf.addPage([PAGE.width, PAGE.height]);
+    ({ width, height } = page.getSize());
+    page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+    y = height - 48;
+  }
+
   y -= 8;
   page.drawLine({
     start: { x: MARGIN, y },
@@ -1000,13 +1015,22 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     color: HAIR,
   });
   y -= 18;
-  drawRight(page, "Billed", amountRight - 90, y, regular, 10, MUTED);
+  drawRight(page, "Billed", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(total), amountRight, y, regular, 10, INK);
+  if (payments.length > 0) {
+    y -= 18;
+    drawRight(page, "Payments received", amountRight, y, bold, 8, MUTED);
+    for (const payment of payments) {
+      y -= 14;
+      drawRight(page, format(payment.date, "dd MMM yyyy"), amountRight - 110, y, regular, 9, MUTED);
+      drawRight(page, formatMoneyPdf(payment.amount), amountRight, y, regular, 9, INK);
+    }
+  }
   y -= 16;
-  drawRight(page, "Paid", amountRight - 90, y, regular, 10, MUTED);
+  drawRight(page, "Paid", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(invoice.paidAmount), amountRight, y, regular, 10, INK);
   y -= 18;
-  drawRight(page, "Total due", amountRight - 90, y, regular, 10, MUTED);
+  drawRight(page, "Total due", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(due), amountRight, y, bold, 13, RED);
   drawPaymentSeal(page, MARGIN, y + 34, bold, invoice.paidAmount, total);
 

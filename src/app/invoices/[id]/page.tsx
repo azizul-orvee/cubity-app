@@ -3,8 +3,9 @@ import Link from "next/link";
 import { CopyPlus, FileDown, Pencil } from "lucide-react";
 import { DeleteInvoiceButton } from "@/components/delete-buttons";
 import { InvoicePaper } from "@/components/invoice-paper";
+import { InvoicePayments } from "@/components/invoice-payments";
 import { PdfDownload } from "@/components/pdf-download";
-import { getInvoice } from "@/lib/invoice-queries";
+import { getInvoice, invoiceDue } from "@/lib/invoice-queries";
 import { getPaymentInstructions } from "@/lib/queries";
 import { invoices } from "@/lib/routes";
 
@@ -45,6 +46,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           Download
         </PdfDownload>
       </div>
+
+      <InvoicePayments invoiceId={invoice.id} due={invoiceDue(invoice)} payments={invoice.payments} />
 
       <InvoicePaper invoice={invoice} payment={payment} />
 

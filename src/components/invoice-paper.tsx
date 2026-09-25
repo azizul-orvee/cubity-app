@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { format } from "date-fns";
+import { formatDate } from "@/lib/dates";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { COMPANY, companyAddressLine, companyPhoneLine, type PaymentInstructions } from "@/lib/company";
 import type { InvoicePdfData } from "@/lib/pdf";
@@ -52,6 +53,12 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
                 <span className="text-[#475257]">Billed</span>
                 <span className="tabular-nums">{formatMoney(total)}</span>
               </p>
+              {invoice.payments.map((payment, index) => (
+                <p key={`${payment.date.toISOString()}-${index}`} className="flex justify-between gap-3">
+                  <span className="text-[#475257]">{formatDate(payment.date)}</span>
+                  <span className="tabular-nums">{formatMoney(payment.amount)}</span>
+                </p>
+              ))}
               <p className="flex justify-between gap-3">
                 <span className="text-[#475257]">Paid</span>
                 <span className="tabular-nums">{formatMoney(invoice.paidAmount)}</span>
@@ -79,11 +86,22 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
 
         <div className="mt-4 flex items-end justify-between gap-4 border-t border-[#c7d6d6] pt-4">
           <PaymentSeal paidAmount={invoice.paidAmount} total={total} />
-          <dl className="grid max-w-60 gap-1.5 text-[13px]">
+          <dl className="grid min-w-64 gap-1.5 text-[13px]">
             <div className="flex justify-between gap-4">
               <dt className="text-[#475257]">Billed</dt>
               <dd className="tabular-nums">{formatMoney(total)}</dd>
             </div>
+            {invoice.payments.length > 0 ? (
+              <div className="grid gap-1.5 border-t border-[#c7d6d6] pt-1.5">
+                <dt className="text-[10px] font-bold tracking-[0.08em] text-[#475257]">PAYMENTS RECEIVED</dt>
+                {invoice.payments.map((payment, index) => (
+                  <div key={`${payment.date.toISOString()}-${index}`} className="flex justify-between gap-4">
+                    <dt className="text-[#475257]">{formatDate(payment.date)}</dt>
+                    <dd className="tabular-nums">{formatMoney(payment.amount)}</dd>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <div className="flex justify-between gap-4">
               <dt className="text-[#475257]">Paid</dt>
               <dd className="tabular-nums">{formatMoney(invoice.paidAmount)}</dd>

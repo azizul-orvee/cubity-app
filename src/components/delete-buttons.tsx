@@ -1,7 +1,7 @@
 "use client";
 
 import { deleteClient, deleteEntry } from "@/lib/actions";
-import { deleteInvoice } from "@/lib/invoice-actions";
+import { deleteInvoice, deleteInvoicePayment } from "@/lib/invoice-actions";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -68,6 +68,34 @@ export function DeleteInvoiceButton({ invoiceId, name }: { invoiceId: string; na
             <AlertDialogCancel>Not now</AlertDialogCancel>
             <Button type="submit" variant="destructive">
               Delete invoice
+            </Button>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function DeleteInvoicePaymentButton({ invoiceId, paymentId }: { invoiceId: string; paymentId: string }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button type="button" className="shrink-0 text-sm font-medium text-destructive">
+          Remove
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove this payment?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This takes the receipt off the invoice. The billed amount stays the same, and the balance due goes up.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <form action={deleteInvoicePayment.bind(null, invoiceId, paymentId)}>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <Button type="submit" variant="destructive">
+              Remove payment
             </Button>
           </AlertDialogFooter>
         </form>

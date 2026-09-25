@@ -96,29 +96,42 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   if (lines.length === 0) return { error: "Select at least one service and enter its amount." };
 
   const billed = lines.reduce((sum, line) => sum + line.amount, 0);
-  const paidRaw = formString(formData, "paid").trim();
-  if (paidRaw && !/^\d+$/.test(paidRaw)) return { error: "Paid amount must be a whole number. No letters or fractions." };
-  const paidAmount = paidRaw ? wholeTakaToPoisha(paidRaw) : 0;
-  if (paidAmount == null) return { error: "Enter a valid paid amount." };
-  if (paidAmount > billed) return { error: "Paid amount is higher than the invoice total." };
 
   const [taken, existing] = await Promise.all([
     prisma.invoice.findUnique({ where: { number }, select: { id: true } }),
-    invoiceId ? prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true } }) : null,
+    invoiceId ? prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true, paidAmount: true } }) : null,
   ]);
   if (taken && taken.id !== invoiceId) return { error: `Invoice ID ${number} is already used by another invoice.` };
 
   if (invoiceId) {
     if (!existing) return { error: "That invoice is no longer here." };
+    if (billed < existing.paidAmount) {
+      return { error: "This total is lower than the payments already recorded. Remove a payment on the invoice first." };
+    }
     await prisma.$transaction([
       prisma.invoiceLine.deleteMany({ where: { invoiceId } }),
       prisma.invoice.update({
         where: { id: invoiceId },
-        data: { ...parsed.data, number, issueDate, paidAmount, lines: { create: lines } },
+        data: { ...parsed.data, number, issueDate, lines: { create: lines } },
       }),
     ]);
     revalidateInvoices(invoiceId);
     redirect(invoices.invoice(invoiceId));
+  }
+
+  let paidAmount = 0;
+  let paidDate: Date | null = null;
+  const paidRaw = formString(formData, "paid").trim();
+  if (paidRaw && !/^\d+$/.test(paidRaw)) return { error: "Paid amount must be a whole number. No letters or fractions." };
+  if (paidRaw) {
+    const parsedPaid = wholeTakaToPoisha(paidRaw);
+    if (parsedPaid == null) return { error: "Enter a valid paid amount." };
+    paidAmount = parsedPaid;
+  }
+  if (paidAmount > billed) return { error: "Paid amount is higher than the invoice total." };
+  if (paidAmount > 0) {
+    paidDate = parseDateInput(formString(formData, "paidDate"));
+    if (!paidDate) return { error: "Choose the date of this payment." };
   }
 
   const created = await prisma.invoice.create({
@@ -128,10 +141,67 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
       issueDate,
       paidAmount,
       lines: { create: lines },
+      payments: paidDate ? { create: { amount: paidAmount, date: paidDate } } : undefined,
     },
   });
   revalidateInvoices(created.id);
   redirect(invoices.invoice(created.id));
+}
+
+export async function recordInvoicePayment(invoiceId: string, formData: FormData) {
+  const amountRaw = formString(formData, "amount").trim();
+  if (!amountRaw) return { error: "Enter the amount received." };
+  if (!/^\d+$/.test(amountRaw)) return { error: "Amount must be a whole number. No letters or fractions." };
+  const amount = wholeTakaToPoisha(amountRaw);
+  if (amount == null || amount <= 0) return { error: "Enter the amount received." };
+
+  const date = parseDateInput(formString(formData, "date"));
+  if (!date) return { error: "Choose a payment date." };
+
+  const noteRaw = formString(formData, "note").trim();
+  const note = noteRaw || null;
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      lines: { select: { amount: true } },
+      payments: { select: { amount: true } },
+    },
+  });
+  if (!invoice) return { error: "That invoice is no longer here." };
+
+  const billed = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
+  const already = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
+  if (already + amount > billed) return { error: "That payment is higher than what is still due." };
+
+  await prisma.$transaction([
+    prisma.invoicePayment.create({ data: { invoiceId, amount, date, note } }),
+    prisma.invoice.update({ where: { id: invoiceId }, data: { paidAmount: already + amount } }),
+  ]);
+  revalidateInvoices(invoiceId);
+  redirect(invoices.invoice(invoiceId));
+}
+
+export async function deleteInvoicePayment(invoiceId: string, paymentId: string, _formData?: FormData) {
+  const payment = await prisma.invoicePayment.findFirst({
+    where: { id: paymentId, invoiceId },
+    select: { id: true },
+  });
+  if (!payment) redirect(invoices.invoice(invoiceId));
+
+  const remaining = await prisma.invoicePayment.aggregate({
+    where: { invoiceId, id: { not: paymentId } },
+    _sum: { amount: true },
+  });
+  await prisma.$transaction([
+    prisma.invoicePayment.delete({ where: { id: paymentId } }),
+    prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { paidAmount: remaining._sum.amount ?? 0 },
+    }),
+  ]);
+  revalidateInvoices(invoiceId);
+  redirect(invoices.invoice(invoiceId));
 }
 
 export async function deleteInvoice(invoiceId: string, _formData?: FormData) {

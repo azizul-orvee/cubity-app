@@ -49,11 +49,24 @@ model Invoice {
   clientAddress String?
   projectName   String?
   issueDate     DateTime
-  paidAmount    Int          @default(0)
+  paidAmount    Int              @default(0)
   notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   lines         InvoiceLine[]
+  payments      InvoicePayment[]
+}
+
+model InvoicePayment {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Int
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
 }
 
 model InvoiceLine {

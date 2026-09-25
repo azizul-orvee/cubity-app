@@ -23,7 +23,10 @@ export const getInvoice = cache(
   cachedQuery("invoice", TAGS.invoices, async (id: string) => {
     return prisma.invoice.findUnique({
       where: { id },
-      include: { lines: { orderBy: { sortOrder: "asc" } } },
+      include: {
+        lines: { orderBy: { sortOrder: "asc" } },
+        payments: { orderBy: [{ date: "asc" }, { createdAt: "asc" }] },
+      },
     });
   }),
 );
