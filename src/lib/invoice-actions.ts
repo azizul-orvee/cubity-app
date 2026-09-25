@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { TAGS } from "@/lib/data-cache";
 import { parseDateInput } from "@/lib/dates";
 import { invoices } from "@/lib/routes";
 
@@ -21,6 +22,7 @@ function formString(formData: FormData, key: string) {
 }
 
 function revalidateInvoices(id?: string) {
+  updateTag(TAGS.invoices);
   revalidatePath(invoices.root);
   revalidatePath(invoices.services);
   revalidatePath(invoices.new);
@@ -100,11 +102,13 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   if (paidAmount == null) return { error: "Enter a valid paid amount." };
   if (paidAmount > billed) return { error: "Paid amount is higher than the invoice total." };
 
-  const taken = await prisma.invoice.findUnique({ where: { number }, select: { id: true } });
+  const [taken, existing] = await Promise.all([
+    prisma.invoice.findUnique({ where: { number }, select: { id: true } }),
+    invoiceId ? prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true } }) : null,
+  ]);
   if (taken && taken.id !== invoiceId) return { error: `Invoice ID ${number} is already used by another invoice.` };
 
   if (invoiceId) {
-    const existing = await prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true } });
     if (!existing) return { error: "That invoice is no longer here." };
     await prisma.$transaction([
       prisma.invoiceLine.deleteMany({ where: { invoiceId } }),

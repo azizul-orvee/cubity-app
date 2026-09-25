@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { TAGS } from "@/lib/data-cache";
 import { parseDateInput } from "@/lib/dates";
 import { totals } from "@/lib/ledger";
 import { parseAmountToPoisha } from "@/lib/money";
@@ -47,6 +48,7 @@ function resolvePromisedAmount(formData: FormData, remaining: number) {
 }
 
 function revalidateClient(id?: string) {
+  updateTag(TAGS.clients);
   revalidatePath(receivables.root);
   revalidatePath(receivables.clients);
   if (id) {
@@ -327,6 +329,7 @@ export async function updatePaymentInstructions(
     update: parsed.data,
   });
 
+  updateTag(TAGS.payment);
   revalidatePath(receivables.root);
   revalidatePath(receivables.settings);
   return { ok: true };

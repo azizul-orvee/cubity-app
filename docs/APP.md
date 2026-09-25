@@ -147,6 +147,12 @@ Prisma + **Neon Postgres** in production (SQLite only worked on this machine):
 
 Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: `.env.example` (`DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` direct).
 
+### Read cache
+
+Page reads (client list, one client, invoice list, one invoice, payment details) go through the Next.js data cache in `src/lib/data-cache.ts`, so repeat visits skip the database. Each read is tagged (`db:clients`, `db:invoices`, `db:payment`). Every server action that writes calls `updateTag` for its tag, so a saved due, payment, or invoice shows up on the very next screen. Edits made outside the app (Prisma Studio, SQL console) show up within 5 minutes. Server actions that check balances before writing still read the database directly. When you add a new write, call `updateTag` with the matching tag.
+
+The Prisma pool uses up to 5 connections per server instance (`src/lib/db.ts`) so parallel queries do not wait on each other.
+
 ## Deploy on Vercel + Neon
 
 1. Repo is on GitHub: `azizul-orvee/cubity-app`. Vercel should deploy on push.
@@ -235,6 +241,7 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-25 — Made screens load faster. Database reads are cached and cleared whenever the app saves a change. The database connection pool went from 1 to 5 so queries run side by side. Saving an edited invoice checks the ID and the invoice together instead of one after the other.
 - 2026-09-25 — Invoices show a Cubity seal for paid, partial, or unpaid, on the screen and in the PDF. The downloaded file is named `Invoice-{ID}-Paid`, `Unpaid`, or `PartialPaid`.
 - 2026-09-25 — New invoices start as `CC420-2509-C01`. The middle four digits are the date and month (25 September → 2509) and follow the issue date. The start and end are filled in and can be changed.
 - 2026-09-25 — Opening Invoice maker from the workspace no longer waits on the invoice list. The Invoices screen appears immediately, and the list fills in after the database query.

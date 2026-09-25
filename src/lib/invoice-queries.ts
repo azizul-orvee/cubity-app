@@ -1,27 +1,32 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
+import { cachedQuery, TAGS } from "@/lib/data-cache";
 
-export const getInvoices = cache(async () => {
-  return prisma.invoice.findMany({
-    orderBy: { issueDate: "desc" },
-    select: {
-      id: true,
-      number: true,
-      clientName: true,
-      issueDate: true,
-      createdAt: true,
-      paidAmount: true,
-      lines: { select: { amount: true } },
-    },
-  });
-});
+export const getInvoices = cache(
+  cachedQuery("invoices", TAGS.invoices, async () => {
+    return prisma.invoice.findMany({
+      orderBy: { issueDate: "desc" },
+      select: {
+        id: true,
+        number: true,
+        clientName: true,
+        issueDate: true,
+        createdAt: true,
+        paidAmount: true,
+        lines: { select: { amount: true } },
+      },
+    });
+  }),
+);
 
-export const getInvoice = cache(async (id: string) => {
-  return prisma.invoice.findUnique({
-    where: { id },
-    include: { lines: { orderBy: { sortOrder: "asc" } } },
-  });
-});
+export const getInvoice = cache(
+  cachedQuery("invoice", TAGS.invoices, async (id: string) => {
+    return prisma.invoice.findUnique({
+      where: { id },
+      include: { lines: { orderBy: { sortOrder: "asc" } } },
+    });
+  }),
+);
 
 export function invoiceTotal(lines: { amount: number }[]) {
   return lines.reduce((sum, line) => sum + line.amount, 0);
