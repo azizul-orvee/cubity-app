@@ -51,7 +51,7 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/invoices/new` | New invoice in cards: Invoice (required invoice ID, issue date), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (optional first receipt: amount and date, with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills a new bill from another invoice (ID left blank, payments are not copied, date is today) |
 | `/invoices/[id]` | The invoice shown like the PDF, plus a Payments card to record another receipt (amount, date, optional note) or remove one. The document lists every receipt with its date, then billed, paid, and still due, and a paid / partial / unpaid Cubity seal. Buttons: Edit, New from this, Download. Delete sits below and asks for confirmation first |
 | `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts. Payments stay as they are. Saving is blocked if the new total is below what has already been paid |
-| `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. Each receipt is printed with its date. The same seal is printed beside the totals. The ID is printed under INVOICE in the letterhead |
+| `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. Each receipt is listed once, in the amount-due box, with its date. Under the particulars, total amount, paid, and total due sit beside the Cubity seal. The ID is printed under INVOICE in the letterhead |
 | `/invoices/services` | Add a service at the top, then rename or remove each one in the list (remove shows Undo). The list stays on this phone. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
@@ -122,7 +122,7 @@ Opening Clients (or a client account) from Home shows the **Cubity seal** only w
 - Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance), a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
 - Payment details are edited at `/receivables/settings` (gear in the receivables header). Defaults: bKash `01973 914236`; NRB Bank, Sylhet Main Branch, MD TAREK AHMED, A/C `7087010002828`, routing `290913794`.
 - Company **outstanding receivables** list with office address and phones
-- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. Every receipt is listed with its date, then paid and still due. A Cubity seal says PAID, PARTIAL, or UNPAID from the paid total. Particulars are the selected services. File name is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`.
+- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. Every receipt is listed once, in the amount-due box, with its date. Under the particulars, the total amount is shown in bold, then paid and total due, beside a Cubity seal that says PAID, PARTIAL, or UNPAID. File name is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`.
 - Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
 ### Extra (beyond the original request)
@@ -256,6 +256,7 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-26 — Invoice PDFs show the total amount in bold under the particulars, with paid and total due beneath it. Dated receipts stay in the amount-due box.
 - 2026-09-26 — Invoice payments are separate receipts with dates. Recording another payment on the same invoice lists every earlier payment on the screen and in the PDF, then the paid total and what is still due.
 - 2026-09-26 — Added a nightly GitHub Action that saves a read-only copy of the Neon database for 90 days, so data can be recovered even if the Neon project is lost.
 - 2026-09-25 — Made screens load faster. Database reads are cached and cleared whenever the app saves a change. The database connection pool went from 1 to 5 so queries run side by side. Saving an edited invoice checks the ID and the invoice together instead of one after the other.

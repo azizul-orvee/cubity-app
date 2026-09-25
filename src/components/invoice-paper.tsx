@@ -50,8 +50,8 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
             <p className="mt-1 text-2xl font-bold text-[#ad1a24] tabular-nums">{formatMoney(due)}</p>
             <div className="mt-2 grid gap-1 border-t border-[#c7d6d6] pt-2 text-[12px]">
               <p className="flex justify-between gap-3">
-                <span className="text-[#475257]">Billed</span>
-                <span className="tabular-nums">{formatMoney(total)}</span>
+                <span className="text-[#475257]">Total amount</span>
+                <span className="font-semibold tabular-nums">{formatMoney(total)}</span>
               </p>
               {invoice.payments.map((payment, index) => (
                 <p key={`${payment.date.toISOString()}-${index}`} className="flex justify-between gap-3">
@@ -86,27 +86,16 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
 
         <div className="mt-4 flex items-end justify-between gap-4 border-t border-[#c7d6d6] pt-4">
           <PaymentSeal paidAmount={invoice.paidAmount} total={total} />
-          <dl className="grid min-w-64 gap-1.5 text-[13px]">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[#475257]">Billed</dt>
-              <dd className="tabular-nums">{formatMoney(total)}</dd>
+          <dl className="grid min-w-56 gap-1.5 text-[13px]">
+            <div className="flex items-baseline justify-between gap-6 border-b border-[#c7d6d6] pb-1.5">
+              <dt className="font-semibold">Total amount</dt>
+              <dd className="text-lg font-bold tabular-nums">{formatMoney(total)}</dd>
             </div>
-            {invoice.payments.length > 0 ? (
-              <div className="grid gap-1.5 border-t border-[#c7d6d6] pt-1.5">
-                <dt className="text-[10px] font-bold tracking-[0.08em] text-[#475257]">PAYMENTS RECEIVED</dt>
-                {invoice.payments.map((payment, index) => (
-                  <div key={`${payment.date.toISOString()}-${index}`} className="flex justify-between gap-4">
-                    <dt className="text-[#475257]">{formatDate(payment.date)}</dt>
-                    <dd className="tabular-nums">{formatMoney(payment.amount)}</dd>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            <div className="flex justify-between gap-4">
+            <div className="flex justify-between gap-6">
               <dt className="text-[#475257]">Paid</dt>
               <dd className="tabular-nums">{formatMoney(invoice.paidAmount)}</dd>
             </div>
-            <div className="flex items-baseline justify-between gap-4">
+            <div className="flex items-baseline justify-between gap-6">
               <dt className="text-[#475257]">Total due</dt>
               <dd className="text-base font-bold text-[#ad1a24] tabular-nums">{formatMoney(due)}</dd>
             </div>

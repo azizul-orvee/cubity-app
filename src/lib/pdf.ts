@@ -932,8 +932,8 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     color: HAIR,
   });
   boxY -= 14;
-  drawText(page, "Billed", innerLeft, boxY, regular, 9, MUTED);
-  drawRight(page, formatMoneyPdf(total), innerRight, boxY, regular, 9, INK);
+  drawText(page, "Total amount", innerLeft, boxY, regular, 9, MUTED);
+  drawRight(page, formatMoneyPdf(total), innerRight, boxY, bold, 9, INK);
   for (const payment of payments) {
     boxY -= 14;
     drawText(page, format(payment.date, "dd MMM yyyy"), innerLeft, boxY, regular, 9, MUTED);
@@ -999,41 +999,30 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     y -= rowHeight;
   }
 
-  const totalsHeight = 70 + (payments.length > 0 ? 18 + payments.length * 14 : 0);
-  if (y < 80 + totalsHeight) {
+  if (y < 160) {
     page = pdf.addPage([PAGE.width, PAGE.height]);
     ({ width, height } = page.getSize());
     page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
     y = height - 48;
   }
 
-  y -= 8;
+  y -= 16;
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: width - MARGIN, y },
     thickness: 0.6,
     color: HAIR,
   });
-  y -= 18;
-  drawRight(page, "Billed", amountRight - 110, y, regular, 10, MUTED);
-  drawRight(page, formatMoneyPdf(total), amountRight, y, regular, 10, INK);
-  if (payments.length > 0) {
-    y -= 18;
-    drawRight(page, "Payments received", amountRight, y, bold, 8, MUTED);
-    for (const payment of payments) {
-      y -= 14;
-      drawRight(page, format(payment.date, "dd MMM yyyy"), amountRight - 110, y, regular, 9, MUTED);
-      drawRight(page, formatMoneyPdf(payment.amount), amountRight, y, regular, 9, INK);
-    }
-  }
+  y -= 20;
+  drawRight(page, "Total amount", amountRight - 110, y, bold, 11, INK);
+  drawRight(page, formatMoneyPdf(total), amountRight, y, bold, 13, INK);
   y -= 16;
   drawRight(page, "Paid", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(invoice.paidAmount), amountRight, y, regular, 10, INK);
   y -= 18;
   drawRight(page, "Total due", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(due), amountRight, y, bold, 13, RED);
-  drawPaymentSeal(page, MARGIN, y + 34, bold, invoice.paidAmount, total);
-
+  drawPaymentSeal(page, MARGIN, y + 48, bold, invoice.paidAmount, total);
   y -= 32;
   if (invoice.notes) {
     if (y < 200) {
