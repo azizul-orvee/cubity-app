@@ -153,6 +153,20 @@ Page reads (client list, one client, invoice list, one invoice, payment details)
 
 The Prisma pool uses up to 5 connections per server instance (`src/lib/db.ts`) so parallel queries do not wait on each other.
 
+### Daily backup
+
+A GitHub Action (`.github/workflows/db-backup.yml`) copies the whole Neon database every night at 3:00 AM Sylhet time. It only reads; it never changes data. Each copy is a `pg_dump` file named `cubity-YYYY-MM-DD.dump`, kept for 90 days on that run's page under **GitHub → Actions → Database backup**. It is not in the code or the commit history. **Run workflow** on that page makes a copy on demand.
+
+It needs the repo secret `DATABASE_URL_UNPOOLED` (the direct Neon URL, host without `-pooler`). The repo must stay private, because anyone who can see Actions can download the files.
+
+To restore, download a copy and load it into a **new** Neon branch or database, never straight over the live one:
+
+```bash
+docker run --rm -v "$PWD:/b" postgres:18 pg_restore --no-owner --no-privileges -d "<new-branch-direct-url>" /b/cubity-YYYY-MM-DD.dump
+```
+
+Neon's own restore history (Branches → Restore) still works too; this copy is for when Neon itself is the problem or the mistake is older than that history.
+
 ## Deploy on Vercel + Neon
 
 1. Repo is on GitHub: `azizul-orvee/cubity-app`. Vercel should deploy on push.
@@ -241,6 +255,7 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 ## Changelog
 
+- 2026-09-26 — Added a nightly GitHub Action that saves a read-only copy of the Neon database for 90 days, so data can be recovered even if the Neon project is lost.
 - 2026-09-25 — Made screens load faster. Database reads are cached and cleared whenever the app saves a change. The database connection pool went from 1 to 5 so queries run side by side. Saving an edited invoice checks the ID and the invoice together instead of one after the other.
 - 2026-09-25 — Invoices show a Cubity seal for paid, partial, or unpaid, on the screen and in the PDF. The downloaded file is named `Invoice-{ID}-Paid`, `Unpaid`, or `PartialPaid`.
 - 2026-09-25 — New invoices start as `CC420-2509-C01`. The middle four digits are the date and month (25 September → 2509) and follow the issue date. The start and end are filled in and can be changed.
