@@ -16,6 +16,9 @@ export function CubityStampLoader({
   const [motion, setMotion] = useState<Motion | null>(null);
 
   useEffect(() => {
+    // The motion is picked after hydration on purpose: choosing it while
+    // rendering would give the server and the phone different animations.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMotion(MOTIONS[Math.floor(Math.random() * MOTIONS.length)]);
   }, []);
 

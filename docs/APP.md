@@ -40,7 +40,7 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp. Blocked until a role is chosen. Engineers see view-only (no add client). |
 | `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
 | `/receivables/clients/new` | Add a client: name and phone required, email and address optional (accountant only) |
-| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF. Accountant gets Edit, Discount, Add due, and Log payment in one grid. Discount shows "None yet" or the amount |
+| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF. Accountant gets Edit, Discount, Add due, and Log payment in one grid. Discount shows "None yet" or the amount. A ledger line is **voided**, never deleted: it stays in the list struck through with the date and reason, and stops counting. **Account history** below the ledger lists discount changes and voided lines |
 | `/receivables/clients/[id]/edit` | Edit the client: name and phone required; email, address, company, site, and notes optional (accountant only) |
 | `/receivables/clients/[id]/discount` | Set or remove the account discount (accountant only). Whole Tk, cannot exceed the billed total. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the client page, the dashboard, and the due-statement PDF. Remove discount clears it |
 | `/receivables/clients/[id]/due` | Add a due / site visit (accountant only) |
@@ -50,11 +50,13 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
 | `/invoices` | Every invoice, newest first, grouped by the day it was created (Today, Yesterday, then the date). Search by client or invoice number. Bottom nav: Invoices, Services, and New. No accountant gate. |
 | `/invoices/new` | New invoice in cards: Invoice (required invoice ID in three parts — start, middle, end — all editable; the middle starts as the year and month, so September 2026 is 2609, plus the issue date), Discount (optional whole Tk, directly under the invoice card, taken off the service total; clear it to remove), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (optional first receipt: amount and date, with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills a new bill from another invoice (a fresh ID, payments are not copied, date is today) |
-| `/invoices/[id]` | The invoice shown like the PDF, plus a Payments card to record another receipt (amount, date, optional note) or remove one. The document lists every receipt with its date, then billed, discount when set, total after discount, paid, and still due, and a Cubity stamp: green Paid, purple Partial payment, or red Unpaid. Buttons: Edit, Discount, New from this, Download. Discount shows "None yet" or the amount. Delete sits below and asks for confirmation first |
+| `/invoices/[id]` | The invoice shown like the PDF, plus a **Client ledger** card (which receivables client this bill belongs to, and whether it is on their ledger) and a Payments card to record another receipt (amount, date, optional note) or remove one. The document lists every receipt with its date, then billed, discount when set, total after discount, paid, and still due, and a Cubity stamp: green Paid, purple Partial payment, or red Unpaid. Buttons: Edit, Discount, New from this, Download. Discount shows "None yet" or the amount. Delete sits below and asks for confirmation first |
 | `/invoices/[id]/discount` | Set or remove this invoice's discount. Whole Tk, cannot exceed the service total or drop the total below what is already paid. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the invoice screen and the PDF. Remove discount clears it |
-| `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts. Payments stay as they are. Saving is blocked if the new total is below what has already been paid |
+| `/invoices/[id]/client` | Pick the receivables client this bill belongs to, searchable by name or phone, with the likely match first. Accountant only. Clearing the link is allowed while the bill is not on a ledger |
+| `/invoices/[id]/ledger` | Put the bill on that client's ledger: due date (defaults to the issue date) and a promised date while money is still owed. Shows what they will owe after it is added. Accountant only |
+| `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts. Payments stay as they are. Saving is blocked if the new total is below what has already been paid, or if the bill is already on a client's ledger and the total would change |
 | `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. Each receipt is listed once, in the amount-due box, with its date. Under the particulars, total amount, paid, and total due sit beside the Cubity stamp (green Paid, purple Partial payment, or red Unpaid). The ID is printed under INVOICE in the letterhead |
-| `/invoices/services` | Add a service at the top, then rename or remove each one in the list (remove shows Undo). The list stays on this phone. Defaults are the five design services |
+| `/invoices/services` | Add a service at the top, then rename, set its usual amount, or remove each one in the list (remove shows Undo). **The list is the office list, shared by every phone.** A phone that still has the old on-device list is offered a one-time "add these to the office list" card. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
 
@@ -99,7 +101,7 @@ The chosen role stays in an httpOnly cookie until you tap **Log out** in the Rec
 - Log payment is a short phone form: amount, date, method; promised date and optional amount if leftover. No payment notes.
 - Overpayment is allowed and shown as advance/credit
 - Payment methods: cash, bank transfer, bKash, Nagad, Rocket, cheque, other
-- Ledger shows a running balance; entries can be deleted
+- Ledger shows a running balance. An entry is **voided, not deleted**: the line stays for the record with the date and an optional reason, shows struck through on the screen and `VOIDED` on the statement, and counts for nothing. Voiding a payment puts the money back on what they owe
 - Promised date and amount can be changed on the client page without logging money
 
 ### Dashboard
@@ -145,13 +147,15 @@ These exist because construction collections usually fail on follow-up, not on t
 Prisma + **Neon Postgres** in production (SQLite only worked on this machine):
 
 - `Client` — profile fields + `nextPromisedDate` + `nextPromisedAmount` (poisha; the installment they said they will bring next)
-- `LedgerEntry` — `DUE` or `PAYMENT`, amount in poisha (Tk × 100), date, method, note, promised date and amount snapshot
+- `LedgerEntry` — `DUE` or `PAYMENT`, amount in poisha (Tk × 100), date, method, note, promised date and amount snapshot, the invoice it came from, and `voidedAt` / `voidReason` when it has been cancelled. Nothing removes a row
+- `ClientEvent` — account history that is not money: discount set, discount removed, entry voided. Saved with the change it describes so a balance can never move with nothing to explain it
+- `Service` — the office service catalog: name, optional usual amount, order, and archived date. An invoice keeps its own copy of the service name and amount, so renaming or removing a service never rewrites a bill already sent
 
 Schema: `prisma/schema.prisma`. Migrations: `prisma/migrations/`. Env template: `.env.example` (`DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` direct).
 
 ### Read cache
 
-Page reads (client list, one client, invoice list, one invoice, payment details) go through the Next.js data cache in `src/lib/data-cache.ts`, so repeat visits skip the database. Each read is tagged (`db:clients`, `db:invoices`, `db:payment`). Every server action that writes calls `updateTag` for its tag, so a saved due, payment, or invoice shows up on the very next screen. Edits made outside the app (Prisma Studio, SQL console) show up within 5 minutes. Server actions that check balances before writing still read the database directly. When you add a new write, call `updateTag` with the matching tag.
+Page reads (client list, one client, invoice list, one invoice, the service list, payment details) go through the Next.js data cache in `src/lib/data-cache.ts`, so repeat visits skip the database. Each read is tagged (`db:clients`, `db:invoices`, `db:payment`, `db:services`), and the invalidation helpers live in `src/lib/revalidate.ts`. Every server action that writes calls `updateTag` for its tag, so a saved due, payment, or invoice shows up on the very next screen. Edits made outside the app (Prisma Studio, SQL console) show up within 5 minutes. Server actions that check balances before writing still read the database directly. When you add a new write, call `updateTag` with the matching tag.
 
 The Prisma pool uses up to 5 connections per server instance (`src/lib/db.ts`) so parallel queries do not wait on each other.
 
@@ -242,7 +246,7 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 The invoice maker is open to anyone who taps the hub card. It does not ask for the accountant password.
 
-The service list is stored on the phone, not in Postgres. Defaults, which can be renamed, removed, or extended on **Services**:
+The service list is stored in Postgres and shared by every phone. Each service can carry the amount the office usually charges, which fills in when you pick it on an invoice. Defaults, which can be renamed, removed, or extended on **Services**:
 
 - Architectural Planning and Drafting
 - Structural Design & Drafting
@@ -250,14 +254,20 @@ The service list is stored on the phone, not in Postgres. Defaults, which can be
 - Electrical Design & Drafting
 - 3D Modeling (Building Exterior)
 
-A saved invoice is the record that goes in the database. It stores the service name and amount at that moment, so later edits to the phone list do not rewrite old invoices. Amounts are poisha, shown as **Tk**. The PDF reuses the receivables payment details (bKash and bank).
+A saved invoice is the record that goes in the database. It stores the service name and amount at that moment, so later edits to the service list do not rewrite old invoices. Amounts are poisha, shown as **Tk**. The PDF reuses the receivables payment details (bKash and bank).
 
-- `Invoice` — number (typed ID such as `CC420-2609-C01`), client, optional phone, address, project, issue date, optional discount, paid total, notes. Discount is whole Tk. Due is the service total minus discount minus what has been paid. The screen and the PDF show Discount and the total after discount when a discount is set
+An invoice can be **linked to a receivables client** and then **added to their ledger**, which is what turns a bill into money owed. Adding it writes one due for the total after discount plus a payment for every receipt already on the invoice, each line carrying the invoice number, so the due statement says which bill it came from. A bill can only be added once, and while it sits on the ledger its total is frozen — to change it, void those ledger entries first. Linking and adding are accountant-only, even though the rest of the invoice maker is open.
+
+- `Invoice` — number (typed ID such as `CC420-2609-C01`), client, optional phone, address, project, issue date, optional discount, notes, and the receivables client it is linked to. **The paid total is not stored**: it is always added up from the receipts, so the screen, the PDF, the file name, and the stamp can never disagree with each other. Discount is whole Tk. Due is the service total minus discount minus what has been paid. The screen and the PDF show Discount and the total after discount when a discount is set
 - `InvoiceLine` — service name snapshot and amount
 - `InvoicePayment` — one receipt on that invoice: amount, date, optional note. The paid total is the sum of these receipts. A later payment is another row on the same invoice, not a new invoice
 
 ## Changelog
 
+- 2026-09-27 — An invoice can be linked to a receivables client and added to their ledger, which writes the due and any receipts already taken, and puts the invoice number on the due statement. While a bill is on the ledger its total is frozen; edit and discount say so.
+- 2026-09-27 — The service list moved off the phone into the office database, so every phone sees the same services. A service can carry the amount usually charged, which fills in on a new invoice. A phone with the old on-device list is offered a one-time import.
+- 2026-09-27 — Ledger entries are voided instead of deleted: the line stays, struck through with its date and reason, marked `VOIDED` on the statement, and counts for nothing. Discount changes and voided lines are listed under Account history on the client page.
+- 2026-09-27 — An invoice no longer stores its paid total; it is added up from the receipts every time, so the screen, the PDF, the file name, and the paid stamp cannot drift apart.
 - 2026-09-27 — Invoice paid, partial, and unpaid marks on the screen and in the PDF use the Cubity stamp artwork: a green Paid seal, a purple Partial payment banner, and a red Unpaid stamp.
 - 2026-09-27 — Discount is a button next to Edit on an invoice and next to Edit, Add due, and Log payment on a client. The screen shows billed, discount, total after discount, and still due. Remove discount clears it. The PDF uses the same totals.
 - 2026-09-27 — Optional discount on invoices and client accounts. It is subtracted from the billed total, and the screen and PDF show the discount and the total after discount. Receivables has an Edit button, like invoices, so the accountant can change the client name, phone, site, and the rest.

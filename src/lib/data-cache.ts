@@ -10,6 +10,7 @@ export const TAGS = {
   clients: "db:clients",
   invoices: "db:invoices",
   payment: "db:payment",
+  services: "db:services",
 } as const;
 
 /** Safety net for edits made outside the app (Prisma Studio, SQL console). */

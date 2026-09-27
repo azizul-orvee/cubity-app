@@ -30,6 +30,7 @@ export type RunningLine = {
   due: number;
   paid: number;
   balance: number;
+  voided: boolean;
 };
 
 export type OpenDue = {
@@ -47,17 +48,27 @@ export function sortEntries(entries: LedgerEntry[]) {
   });
 }
 
+/**
+ * A voided entry stays on the ledger as a record but counts for nothing.
+ * Every total goes through this, so voiding can never be half-applied.
+ */
+export function activeEntries(entries: LedgerEntry[]) {
+  return entries.filter((entry) => entry.voidedAt == null);
+}
+
 export function runningLedger(entries: LedgerEntry[]): RunningLine[] {
   let balance = 0;
   return sortEntries(entries).map((entry) => {
-    const due = entry.type === "DUE" ? entry.amount : 0;
-    const paid = entry.type === "PAYMENT" ? entry.amount : 0;
+    const voided = entry.voidedAt != null;
+    const due = !voided && entry.type === "DUE" ? entry.amount : 0;
+    const paid = !voided && entry.type === "PAYMENT" ? entry.amount : 0;
     balance += due - paid;
-    return { entry, due, paid, balance };
+    return { entry, due, paid, balance, voided };
   });
 }
 
-export function totals(entries: LedgerEntry[], discountAmount = 0) {
+export function totals(allEntries: LedgerEntry[], discountAmount = 0) {
+  const entries = activeEntries(allEntries);
   const totalDue = entries
     .filter((entry) => entry.type === "DUE")
     .reduce((sum, entry) => sum + entry.amount, 0);
@@ -82,8 +93,8 @@ export function agingBucket(ageDays: number): AgingKey {
   return "d90";
 }
 
-export function openDues(entries: LedgerEntry[], discountAmount = 0): OpenDue[] {
-  const chronological = sortEntries(entries);
+export function openDues(allEntries: LedgerEntry[], discountAmount = 0): OpenDue[] {
+  const chronological = sortEntries(activeEntries(allEntries));
   const dues = chronological.filter((entry) => entry.type === "DUE");
   let remainingPayments = chronological
     .filter((entry) => entry.type === "PAYMENT")
@@ -142,12 +153,9 @@ export function promisedToward(client: Pick<Client, "nextPromisedAmount">, outst
 
 export function clientStatus(client: ClientWithEntries) {
   const { totalDue, totalPaid, outstanding, discount, netDue } = totals(client.entries, client.discountAmount ?? 0);
-  const lastPayment = sortEntries(client.entries)
-    .filter((entry) => entry.type === "PAYMENT")
-    .at(-1);
-  const lastDue = sortEntries(client.entries)
-    .filter((entry) => entry.type === "DUE")
-    .at(-1);
+  const active = sortEntries(activeEntries(client.entries));
+  const lastPayment = active.filter((entry) => entry.type === "PAYMENT").at(-1);
+  const lastDue = active.filter((entry) => entry.type === "DUE").at(-1);
   const promised = client.nextPromisedDate;
   const open = Math.max(outstanding, 0);
   const promisedAmount = promised && open > 0 ? promisedToward(client, open) : 0;
@@ -212,7 +220,7 @@ export function companySnapshot(clients: ClientWithEntries[]) {
   const collectedThisMonth = clients.reduce((sum, client) => {
     return (
       sum +
-      client.entries
+      activeEntries(client.entries)
         .filter((entry) => entry.type === "PAYMENT" && !isBefore(startOfDay(entry.date), monthStart))
         .reduce((inner, entry) => inner + entry.amount, 0)
     );
@@ -221,7 +229,7 @@ export function companySnapshot(clients: ClientWithEntries[]) {
   const billedThisMonth = clients.reduce((sum, client) => {
     return (
       sum +
-      client.entries
+      activeEntries(client.entries)
         .filter((entry) => entry.type === "DUE" && !isBefore(startOfDay(entry.date), monthStart))
         .reduce((inner, entry) => inner + entry.amount, 0)
     );
@@ -279,7 +287,7 @@ export function monthlySeries(clients: ClientWithEntries[], months = 6) {
   const map = new Map(buckets.map((bucket) => [bucket.key, bucket]));
 
   for (const client of clients) {
-    for (const entry of client.entries) {
+    for (const entry of activeEntries(client.entries)) {
       const bucket = map.get(format(entry.date, "yyyy-MM"));
       if (!bucket) continue;
       if (entry.type === "DUE") bucket.billed += entry.amount;

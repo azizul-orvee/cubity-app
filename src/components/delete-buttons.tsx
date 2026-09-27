@@ -1,8 +1,10 @@
 "use client";
 
-import { deleteClient, deleteEntry } from "@/lib/actions";
+import { deleteClient, voidEntry } from "@/lib/actions";
 import { deleteInvoice, deleteInvoicePayment } from "@/lib/invoice-actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -14,7 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function DeleteEntryButton({
+export function VoidEntryButton({
   entryId,
   clientId,
 }: {
@@ -25,21 +27,34 @@ export function DeleteEntryButton({
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button variant="ghost" size="xs">
-          Delete
+          Void
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+          <AlertDialogTitle>Void this entry?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the due or payment from the client ledger and updates the outstanding balance.
+            The line stays on the ledger and on the statement, struck through, and stops counting
+            towards the balance. Say why, so the statement explains itself later.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <form action={deleteEntry.bind(null, entryId, clientId)}>
+        <form action={voidEntry.bind(null, entryId, clientId)} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor={`void-reason-${entryId}`}>
+              Reason <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id={`void-reason-${entryId}`}
+              name="reason"
+              autoComplete="off"
+              placeholder="Entered twice, wrong client, wrong amount"
+              className="h-12 rounded-xl text-base md:text-base"
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <Button type="submit" variant="destructive">
-              Delete entry
+              Void entry
             </Button>
           </AlertDialogFooter>
         </form>
@@ -60,7 +75,8 @@ export function DeleteInvoiceButton({ invoiceId, name }: { invoiceId: string; na
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this invoice?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes {name}&apos;s invoice. The service list on this phone stays as it is.
+            This permanently removes {name}&apos;s invoice. The office service list stays as it is, and any
+            ledger entries it created stay on the client&apos;s account.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={deleteInvoice.bind(null, invoiceId)}>
@@ -114,7 +130,8 @@ export function DeleteClientButton({ clientId, name }: { clientId: string; name:
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes the client and their full due / payment history.
+            This permanently removes the client and their full due / payment history, including
+            voided entries. To correct a single line, void it instead.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={deleteClient.bind(null, clientId)}>

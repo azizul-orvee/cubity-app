@@ -9,6 +9,7 @@ import { parseDateInput } from "@/lib/dates";
 import { totals } from "@/lib/ledger";
 import { parseAmountToPoisha } from "@/lib/money";
 import { DEFAULT_PAYMENT } from "@/lib/company";
+import { revalidateClient } from "@/lib/revalidate";
 import { receivables } from "@/lib/routes";
 import { redirectUnlessAccountant, requireAccountant } from "@/lib/workspace-role";
 
@@ -60,17 +61,19 @@ function resolvePromisedAmount(formData: FormData, remaining: number) {
   return Math.min(amount, remaining);
 }
 
-function revalidateClient(id?: string) {
-  updateTag(TAGS.clients);
-  revalidatePath(receivables.root);
-  revalidatePath(receivables.clients);
-  if (id) {
-    revalidatePath(receivables.client(id));
-    revalidatePath(receivables.clientDue(id));
-    revalidatePath(receivables.clientPay(id));
-    revalidatePath(receivables.clientEdit(id));
-    revalidatePath(receivables.clientDiscount(id));
-  }
+/**
+ * A discount change is not money, so it is not a ledger entry. It is recorded
+ * as account history instead, because otherwise a balance could move with
+ * nothing on the ledger to explain it.
+ */
+function discountEvent(clientId: string, before: number, after: number) {
+  if (before === after) return null;
+  return {
+    clientId,
+    kind: after === 0 ? "DISCOUNT_REMOVED" : "DISCOUNT_SET",
+    amountBefore: before,
+    amountAfter: after,
+  };
 }
 
 export async function createClient(formData: FormData) {
@@ -123,10 +126,14 @@ export async function updateClient(clientId: string, formData: FormData) {
   const discount = readOptionalDiscount(formString(formData, "discount"), totals(existing.entries).totalDue);
   if ("error" in discount) return discount;
 
-  await prisma.client.update({
-    where: { id: clientId },
-    data: { ...parsed.data, discountAmount: discount.discountAmount },
-  });
+  const event = discountEvent(clientId, existing.discountAmount, discount.discountAmount);
+  await prisma.$transaction([
+    prisma.client.update({
+      where: { id: clientId },
+      data: { ...parsed.data, discountAmount: discount.discountAmount },
+    }),
+    ...(event ? [prisma.clientEvent.create({ data: event })] : []),
+  ]);
   revalidateClient(clientId);
   redirect(receivables.client(clientId));
 }
@@ -148,10 +155,14 @@ export async function setClientDiscount(clientId: string, formData: FormData) {
       : readOptionalDiscount(formString(formData, "discount"), billed);
   if ("error" in discount) return discount;
 
-  await prisma.client.update({
-    where: { id: clientId },
-    data: { discountAmount: discount.discountAmount },
-  });
+  const event = discountEvent(clientId, existing.discountAmount, discount.discountAmount);
+  await prisma.$transaction([
+    prisma.client.update({
+      where: { id: clientId },
+      data: { discountAmount: discount.discountAmount },
+    }),
+    ...(event ? [prisma.clientEvent.create({ data: event })] : []),
+  ]);
   revalidateClient(clientId);
   redirect(receivables.client(clientId));
 }
@@ -383,10 +394,40 @@ export async function updatePaymentInstructions(
   return { ok: true };
 }
 
-export async function deleteEntry(entryId: string, clientId: string) {
+/**
+ * A ledger entry is never deleted. It is voided: the row stays for the record,
+ * struck through on the screen and on the statement, and left out of every
+ * total. A statement the office may have to defend months later keeps its
+ * history instead of quietly losing a line.
+ */
+export async function voidEntry(entryId: string, clientId: string, formData?: FormData) {
   await redirectUnlessAccountant(receivables.client(clientId));
 
-  await prisma.ledgerEntry.delete({ where: { id: entryId } });
+  const reason = formData ? formString(formData, "reason").trim() : "";
+  const entry = await prisma.ledgerEntry.findFirst({
+    where: { id: entryId, clientId },
+    select: { id: true, type: true, amount: true, voidedAt: true },
+  });
+  if (!entry || entry.voidedAt) {
+    revalidateClient(clientId);
+    return;
+  }
+
+  const what = entry.type === "DUE" ? "due" : "payment";
+  await prisma.$transaction([
+    prisma.ledgerEntry.update({
+      where: { id: entryId },
+      data: { voidedAt: new Date(), voidReason: reason || null },
+    }),
+    prisma.clientEvent.create({
+      data: {
+        clientId,
+        kind: "ENTRY_VOIDED",
+        amountBefore: entry.amount,
+        note: reason ? `Voided a ${what} — ${reason}` : `Voided a ${what}`,
+      },
+    }),
+  ]);
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },

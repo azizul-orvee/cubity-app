@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgePercent, FileDown, MessageCircle, Pencil, Phone, Plus, Wallet } from "lucide-react";
-import { DeleteClientButton, DeleteEntryButton } from "@/components/delete-buttons";
+import { DeleteClientButton, VoidEntryButton } from "@/components/delete-buttons";
 import { PdfDownload } from "@/components/pdf-download";
 import { DueStatusBadge } from "@/components/due-status-badge";
 import { PromisedDateForm } from "@/components/promised-date-form";
@@ -10,13 +10,17 @@ import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, telHref, whatsappHref } from "@/lib/ledger";
 import { paymentMethodLabel } from "@/lib/company";
 import { formatMoney } from "@/lib/money";
-import { getClient } from "@/lib/queries";
+import { getClient, getClientEvents } from "@/lib/queries";
 import { receivables } from "@/lib/routes";
 import { canEditReceivables } from "@/lib/workspace-role";
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [client, canEdit] = await Promise.all([getClient(id), canEditReceivables()]);
+  const [client, canEdit, events] = await Promise.all([
+    getClient(id),
+    canEditReceivables(),
+    getClientEvents(id),
+  ]);
   if (!client) notFound();
 
   const status = clientStatus(client);
@@ -141,18 +145,31 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         ) : (
           <div className="grid gap-3">
             {ledger.map((line) => (
-              <article key={line.entry.id} className="rounded-2xl bg-[#F6FAFA] px-4 py-4">
+              <article
+                key={line.entry.id}
+                className={
+                  line.voided
+                    ? "rounded-2xl bg-[#F6FAFA]/70 px-4 py-4 ring-1 ring-dashed ring-border"
+                    : "rounded-2xl bg-[#F6FAFA] px-4 py-4"
+                }
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">{formatDate(line.entry.date)}</p>
-                    <p className="mt-1 font-medium">
+                    <p className={line.voided ? "mt-1 font-medium text-muted-foreground line-through" : "mt-1 font-medium"}>
                       {line.entry.type === "DUE" ? "Due added" : "Payment received"}
                       {paymentMethodLabel(line.entry.method) ? ` · ${paymentMethodLabel(line.entry.method)}` : ""}
                     </p>
                     {line.entry.note ? (
                       <p className="mt-1 text-sm text-muted-foreground">{line.entry.note}</p>
                     ) : null}
-                    {line.entry.promisedDate ? (
+                    {line.voided ? (
+                      <p className="mt-1 text-sm font-medium text-destructive">
+                        Voided {formatDate(line.entry.voidedAt)}
+                        {line.entry.voidReason ? ` · ${line.entry.voidReason}` : ""}
+                      </p>
+                    ) : null}
+                    {!line.voided && line.entry.promisedDate ? (
                       <p className="mt-1 text-sm text-muted-foreground">
                         Remaining promised {formatDate(line.entry.promisedDate)}
                         {line.entry.promisedAmount
@@ -162,12 +179,22 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                     ) : null}
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className={line.paid ? "font-semibold tabular-nums text-teal-700" : "font-semibold tabular-nums text-indigo-700"}>
-                      {line.due ? `+ ${formatMoney(line.due)}` : `− ${formatMoney(line.paid)}`}
+                    <p
+                      className={
+                        line.voided
+                          ? "font-semibold tabular-nums text-muted-foreground line-through"
+                          : line.entry.type === "PAYMENT"
+                            ? "font-semibold tabular-nums text-teal-700"
+                            : "font-semibold tabular-nums text-indigo-700"
+                      }
+                    >
+                      {line.entry.type === "DUE"
+                        ? `+ ${formatMoney(line.entry.amount)}`
+                        : `− ${formatMoney(line.entry.amount)}`}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">Bal {formatMoney(line.balance)}</p>
-                    {canEdit ? (
-                      <DeleteEntryButton entryId={line.entry.id} clientId={client.id} />
+                    {canEdit && !line.voided ? (
+                      <VoidEntryButton entryId={line.entry.id} clientId={client.id} />
                     ) : null}
                   </div>
                 </div>
@@ -181,6 +208,23 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           </p>
         ) : null}
       </section>
+
+      {events.length > 0 ? (
+        <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
+          <h2 className="text-lg font-semibold tracking-tight">Account history</h2>
+          <p className="mt-1 mb-5 text-sm leading-relaxed text-muted-foreground">
+            Changes that are not money: discounts and voided lines.
+          </p>
+          <ul className="grid gap-3">
+            {events.map((event) => (
+              <li key={event.id} className="rounded-2xl bg-[#F6FAFA] px-4 py-3">
+                <p className="text-sm text-muted-foreground">{formatDate(event.createdAt)}</p>
+                <p className="mt-1 text-sm font-medium">{describeEvent(event)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {client.address || client.email || client.notes || client.organization ? (
         <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
@@ -229,6 +273,29 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       ) : null}
     </div>
   );
+}
+
+function describeEvent(event: {
+  kind: string;
+  amountBefore: number | null;
+  amountAfter: number | null;
+  note: string | null;
+}) {
+  if (event.kind === "DISCOUNT_REMOVED") {
+    return `Discount removed${event.amountBefore ? ` (was ${formatMoney(event.amountBefore)})` : ""}`;
+  }
+  if (event.kind === "DISCOUNT_SET") {
+    const to = event.amountAfter ?? 0;
+    const from = event.amountBefore ?? 0;
+    return from > 0
+      ? `Discount changed to ${formatMoney(to)} from ${formatMoney(from)}`
+      : `Discount set to ${formatMoney(to)}`;
+  }
+  if (event.kind === "ENTRY_VOIDED") {
+    const amount = event.amountBefore ? ` of ${formatMoney(event.amountBefore)}` : "";
+    return `${event.note ?? "Entry voided"}${amount}`;
+  }
+  return event.note ?? event.kind;
 }
 
 function Action({

@@ -23,6 +23,8 @@ model Client {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   entries          LedgerEntry[]
+  invoices         Invoice[]
+  events           ClientEvent[]
 }
 
 model LedgerEntry {
@@ -36,10 +38,31 @@ model LedgerEntry {
   note         String?
   promisedDate DateTime?
   promisedAmount Int?
+  /// A voided entry stays on the ledger for the record but is left out of every total.
+  voidedAt     DateTime?
+  voidReason   String?
+  /// Set when this entry came from an invoice, so the same bill is never added twice.
+  invoiceId    String?
+  invoice      Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
   @@index([clientId])
   @@index([date])
+  @@index([invoiceId])
+}
+
+/// Account history that is not money: discount changes and voided entries.
+model ClientEvent {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind         String
+  amountBefore Int?
+  amountAfter  Int?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
 }
 
 model Invoice {
@@ -50,13 +73,18 @@ model Invoice {
   clientAddress String?
   projectName   String?
   issueDate     DateTime
-  paidAmount     Int              @default(0)
   discountAmount Int              @default(0)
   notes          String?
+  /// Optional link to the receivables client this bill belongs to.
+  clientId       String?
+  client         Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   lines         InvoiceLine[]
   payments      InvoicePayment[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([clientId])
 }
 
 model InvoicePayment {
@@ -80,6 +108,20 @@ model InvoiceLine {
   sortOrder   Int     @default(0)
 
   @@index([invoiceId])
+}
+
+/// The office service catalog. InvoiceLine keeps its own name snapshot, so
+/// renaming or removing a service never rewrites an invoice that is already out.
+model Service {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  defaultAmount Int?
+  sortOrder     Int       @default(0)
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([archivedAt])
 }
 
 model CompanyPayment {

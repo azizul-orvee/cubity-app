@@ -53,13 +53,24 @@ export const invoices = {
   discount(id: string) {
     return `${INVOICES}/${id}/discount`;
   },
+  /** Pick which receivables client this bill belongs to. */
+  client(id: string) {
+    return `${INVOICES}/${id}/client`;
+  },
+  /** Put this bill on that client's ledger as a due. */
+  ledger(id: string) {
+    return `${INVOICES}/${id}/ledger`;
+  },
   pdf(id: string) {
     return `${INVOICES}/${id}/pdf`;
   },
 };
 
 export function isInvoiceFormPath(pathname: string) {
-  return pathname === invoices.new || /^\/invoices\/[^/]+\/(edit|discount)$/.test(pathname);
+  return (
+    pathname === invoices.new ||
+    /^\/invoices\/[^/]+\/(edit|discount|client|ledger)$/.test(pathname)
+  );
 }
 
 export function isReceivablesFormPath(pathname: string) {

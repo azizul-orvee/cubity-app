@@ -1,12 +1,12 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { TAGS } from "@/lib/data-cache";
 import { parseDateInput } from "@/lib/dates";
+import { sumPayments } from "@/lib/invoice-queries";
 import { clampDiscount } from "@/lib/money";
+import { revalidateClient, revalidateInvoices } from "@/lib/revalidate";
 import { invoices } from "@/lib/routes";
 
 function wholeTakaToPoisha(raw: string) {
@@ -20,18 +20,6 @@ function wholeTakaToPoisha(raw: string) {
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
-}
-
-function revalidateInvoices(id?: string) {
-  updateTag(TAGS.invoices);
-  revalidatePath(invoices.root);
-  revalidatePath(invoices.services);
-  revalidatePath(invoices.new);
-  if (id) {
-    revalidatePath(invoices.invoice(id));
-    revalidatePath(invoices.edit(id));
-    revalidatePath(invoices.discount(id));
-  }
 }
 
 const invoiceSchema = z.object({
@@ -83,6 +71,15 @@ function readInvoiceId(formData: FormData) {
   return { number };
 }
 
+/** The hidden client link the form carries, so editing a bill never drops it. */
+async function readClientLink(formData: FormData) {
+  const clientId = formString(formData, "clientId").trim();
+  if (!clientId) return { clientId: null };
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
+  if (!client) return { clientId: null };
+  return { clientId: client.id };
+}
+
 export async function saveInvoice(invoiceId: string | null, formData: FormData) {
   const parsed = invoiceSchema.safeParse({
     clientName: formString(formData, "clientName"),
@@ -111,40 +108,71 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   const discount = readDiscount(formString(formData, "discount"), billed);
   if ("error" in discount) return discount;
   const net = clampDiscount(billed, discount.discountAmount).net;
+  const { clientId } = await readClientLink(formData);
 
   const [taken, existing] = await Promise.all([
     prisma.invoice.findUnique({ where: { number }, select: { id: true } }),
-    invoiceId ? prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true, paidAmount: true } }) : null,
+    invoiceId
+      ? prisma.invoice.findUnique({
+          where: { id: invoiceId },
+          select: {
+            id: true,
+            discountAmount: true,
+            payments: { select: { amount: true } },
+            lines: { select: { amount: true } },
+            ledgerEntries: { where: { voidedAt: null }, select: { id: true } },
+          },
+        })
+      : null,
   ]);
   if (taken && taken.id !== invoiceId) return { error: `Invoice ID ${number} is already used by another invoice.` };
 
   if (invoiceId) {
     if (!existing) return { error: "That invoice is no longer here." };
-    if (net < existing.paidAmount) {
+    const alreadyPaid = sumPayments(existing.payments);
+    if (net < alreadyPaid) {
       return { error: "This total after discount is lower than the payments already recorded. Remove a payment on the invoice first." };
+    }
+    // Once the bill is a due on someone's ledger, changing what it adds up to
+    // would leave the ledger saying one thing and the invoice another.
+    const wasNet = clampDiscount(
+      existing.lines.reduce((sum, line) => sum + line.amount, 0),
+      existing.discountAmount,
+    ).net;
+    if (existing.ledgerEntries.length > 0 && net !== wasNet) {
+      return {
+        error: "This bill is already on the client ledger, so its total cannot change. Void those ledger entries first, then edit it.",
+      };
     }
     await prisma.$transaction([
       prisma.invoiceLine.deleteMany({ where: { invoiceId } }),
       prisma.invoice.update({
         where: { id: invoiceId },
-        data: { ...parsed.data, number, issueDate, discountAmount: discount.discountAmount, lines: { create: lines } },
+        data: {
+          ...parsed.data,
+          number,
+          issueDate,
+          discountAmount: discount.discountAmount,
+          clientId,
+          lines: { create: lines },
+        },
       }),
     ]);
     revalidateInvoices(invoiceId);
     redirect(invoices.invoice(invoiceId));
   }
 
-  let paidAmount = 0;
+  let firstPayment = 0;
   let paidDate: Date | null = null;
   const paidRaw = formString(formData, "paid").trim();
   if (paidRaw && !/^\d+$/.test(paidRaw)) return { error: "Paid amount must be a whole number. No letters or fractions." };
   if (paidRaw) {
     const parsedPaid = wholeTakaToPoisha(paidRaw);
     if (parsedPaid == null) return { error: "Enter a valid paid amount." };
-    paidAmount = parsedPaid;
+    firstPayment = parsedPaid;
   }
-  if (paidAmount > net) return { error: "Paid amount is higher than the total after discount." };
-  if (paidAmount > 0) {
+  if (firstPayment > net) return { error: "Paid amount is higher than the total after discount." };
+  if (firstPayment > 0) {
     paidDate = parseDateInput(formString(formData, "paidDate"));
     if (!paidDate) return { error: "Choose the date of this payment." };
   }
@@ -154,10 +182,10 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
       number,
       ...parsed.data,
       issueDate,
-      paidAmount,
       discountAmount: discount.discountAmount,
+      clientId,
       lines: { create: lines },
-      payments: paidDate ? { create: { amount: paidAmount, date: paidDate } } : undefined,
+      payments: paidDate ? { create: { amount: firstPayment, date: paidDate } } : undefined,
     },
   });
   revalidateInvoices(created.id);
@@ -167,7 +195,12 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
 export async function setInvoiceDiscount(invoiceId: string, formData: FormData) {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    select: { paidAmount: true, lines: { select: { amount: true } } },
+    select: {
+      discountAmount: true,
+      lines: { select: { amount: true } },
+      payments: { select: { amount: true } },
+      ledgerEntries: { where: { voidedAt: null }, select: { id: true } },
+    },
   });
   if (!invoice) return { error: "That invoice is no longer here." };
 
@@ -178,8 +211,13 @@ export async function setInvoiceDiscount(invoiceId: string, formData: FormData) 
       : readDiscount(formString(formData, "discount"), billed);
   if ("error" in discount) return discount;
   const net = clampDiscount(billed, discount.discountAmount).net;
-  if (net < invoice.paidAmount) {
+  if (net < sumPayments(invoice.payments)) {
     return { error: "This discount would put the total below what has already been paid. Remove a payment first." };
+  }
+  if (invoice.ledgerEntries.length > 0 && discount.discountAmount !== invoice.discountAmount) {
+    return {
+      error: "This bill is already on the client ledger, so its total cannot change. Void those ledger entries first, then set the discount.",
+    };
   }
 
   await prisma.invoice.update({
@@ -215,13 +253,11 @@ export async function recordInvoicePayment(invoiceId: string, formData: FormData
 
   const billed = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
   const net = clampDiscount(billed, invoice.discountAmount).net;
-  const already = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
-  if (already + amount > net) return { error: "That payment is higher than what is still due." };
+  if (sumPayments(invoice.payments) + amount > net) {
+    return { error: "That payment is higher than what is still due." };
+  }
 
-  await prisma.$transaction([
-    prisma.invoicePayment.create({ data: { invoiceId, amount, date, note } }),
-    prisma.invoice.update({ where: { id: invoiceId }, data: { paidAmount: already + amount } }),
-  ]);
+  await prisma.invoicePayment.create({ data: { invoiceId, amount, date, note } });
   revalidateInvoices(invoiceId);
   redirect(invoices.invoice(invoiceId));
 }
@@ -233,23 +269,20 @@ export async function deleteInvoicePayment(invoiceId: string, paymentId: string,
   });
   if (!payment) redirect(invoices.invoice(invoiceId));
 
-  const remaining = await prisma.invoicePayment.aggregate({
-    where: { invoiceId, id: { not: paymentId } },
-    _sum: { amount: true },
-  });
-  await prisma.$transaction([
-    prisma.invoicePayment.delete({ where: { id: paymentId } }),
-    prisma.invoice.update({
-      where: { id: invoiceId },
-      data: { paidAmount: remaining._sum.amount ?? 0 },
-    }),
-  ]);
+  await prisma.invoicePayment.delete({ where: { id: paymentId } });
   revalidateInvoices(invoiceId);
   redirect(invoices.invoice(invoiceId));
 }
 
 export async function deleteInvoice(invoiceId: string, _formData?: FormData) {
+  // Deleting the bill leaves the client's ledger entries in place with their
+  // invoice link cleared, so their cached rows have to be refreshed as well.
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: { clientId: true },
+  });
   await prisma.invoice.delete({ where: { id: invoiceId } });
   revalidateInvoices(invoiceId);
+  if (invoice?.clientId) revalidateClient(invoice.clientId);
   redirect(invoices.root);
 }

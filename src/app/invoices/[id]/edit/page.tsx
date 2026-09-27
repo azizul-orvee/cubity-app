@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { InvoiceForm } from "@/components/invoice-form";
 import { getInvoice } from "@/lib/invoice-queries";
+import { getServices } from "@/lib/service-queries";
 import { invoices } from "@/lib/routes";
 
 export default async function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const invoice = await getInvoice(id);
+  const [invoice, catalog] = await Promise.all([getInvoice(id), getServices()]);
   if (!invoice) notFound();
 
   return (
@@ -18,7 +19,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         <p className="mt-4 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">{invoice.number}</p>
         <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Edit invoice</h1>
       </div>
-      <InvoiceForm invoice={invoice} />
+      <InvoiceForm invoice={invoice} catalog={catalog} />
     </div>
   );
 }

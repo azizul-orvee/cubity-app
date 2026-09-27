@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import type { Invoice, InvoiceLine } from "@prisma/client";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { saveInvoice } from "@/lib/invoice-actions";
-import { loadInvoiceServices, type CatalogService } from "@/lib/invoice-catalog";
+import type { CatalogService } from "@/lib/service-queries";
 import { invoiceYearMonthCode, todayInputValue, toInputValue } from "@/lib/dates";
 import { formatMoney, poishaToInput } from "@/lib/money";
 import { invoices } from "@/lib/routes";
@@ -63,15 +63,48 @@ function Optional() {
   return <span className="font-normal text-muted-foreground">(optional)</span>;
 }
 
-type InvoiceWithLines = Invoice & { lines: InvoiceLine[] };
+/** The paid total is derived from the receipt rows, never stored on the invoice. */
+type InvoiceWithLines = Invoice & { lines: InvoiceLine[]; paidAmount: number };
 
 /** `invoice` edits that invoice. `template` only pre-fills a new invoice from another one. */
-export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines; template?: InvoiceWithLines }) {
+export function InvoiceForm({
+  invoice,
+  template,
+  catalog,
+}: {
+  invoice?: InvoiceWithLines;
+  template?: InvoiceWithLines;
+  catalog: CatalogService[];
+}) {
   const source = invoice ?? template;
-  const [services, setServices] = useState<CatalogService[]>([]);
 
-  const [selected, setSelected] = useState<string[]>([]);
-  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  /**
+   * The office catalog, plus any service name this invoice was written with that
+   * has since been renamed or removed, so an old bill still shows its own lines.
+   */
+  const services = useMemo(() => {
+    const known = new Set(catalog.map((service) => service.name));
+    const extras = (source?.lines ?? [])
+      .filter((line) => !known.has(line.serviceName))
+      .map((line) => ({ id: `line-${line.id}`, name: line.serviceName, defaultAmount: null }));
+    return [...catalog, ...extras];
+  }, [catalog, source]);
+
+  /** Which services this invoice already uses, and at what amounts. */
+  const opening = useMemo(() => {
+    const ids: string[] = [];
+    const values: Record<string, string> = {};
+    for (const line of source?.lines ?? []) {
+      const match = services.find((service) => service.name === line.serviceName);
+      const key = match?.id ?? line.serviceName;
+      ids.push(key);
+      values[key] = poishaToInput(line.amount);
+    }
+    return { ids, values };
+  }, [services, source]);
+
+  const [selected, setSelected] = useState<string[]>(opening.ids);
+  const [amounts, setAmounts] = useState<Record<string, string>>(opening.values);
   const [justSelected, setJustSelected] = useState<string | null>(null);
   const [paid, setPaid] = useState("");
   const [discount, setDiscount] = useState(poishaToInput(source?.discountAmount));
@@ -110,26 +143,6 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
     return () => window.clearInterval(timer);
   }, [invoice]);
 
-  useEffect(() => {
-    const catalog = loadInvoiceServices();
-    const known = new Set(catalog.map((service) => service.name));
-    const extras = (source?.lines ?? [])
-      .filter((line) => !known.has(line.serviceName))
-      .map((line) => ({ id: `line-${line.id}`, name: line.serviceName }));
-    const next = [...catalog, ...extras];
-    setServices(next);
-    if (!source) return;
-    const selectedIds: string[] = [];
-    const nextAmounts: Record<string, string> = {};
-    for (const line of source.lines) {
-      const match = next.find((service) => service.name === line.serviceName);
-      const key = match?.id ?? line.serviceName;
-      selectedIds.push(key);
-      nextAmounts[key] = poishaToInput(line.amount);
-    }
-    setSelected(selectedIds);
-    setAmounts(nextAmounts);
-  }, [source]);
   const bound = saveInvoice.bind(null, invoice?.id ?? null);
   const [state, formAction] = useActionState(async (_prev: State, formData: FormData) => {
     return bound(formData);
@@ -158,12 +171,18 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
   ];
 
   function toggle(id: string) {
-    setJustSelected(selected.includes(id) ? null : id);
+    const turningOn = !selected.includes(id);
+    setJustSelected(turningOn ? id : null);
     setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    if (!turningOn) return;
+    const usual = services.find((service) => service.id === id)?.defaultAmount;
+    if (!usual) return;
+    setAmounts((current) => (current[id] ? current : { ...current, [id]: poishaToInput(usual) }));
   }
 
   return (
     <form action={formAction} className="grid grid-cols-1 gap-5">
+      <input type="hidden" name="clientId" value={source?.clientId ?? ""} />
       <Section title="Invoice" hint="The invoice ID is printed on the PDF and used as its file name.">
         <div className="grid gap-2.5">
           <Label htmlFor="invoice-prefix" className="text-base">
@@ -367,7 +386,7 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
       >
         {services.length === 0 ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
-            No services yet. Add one from the services list, then come back.
+            No services in the office list yet. Add one from Services, then come back.
           </p>
         ) : (
           <div className="grid gap-3">

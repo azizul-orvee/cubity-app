@@ -657,11 +657,16 @@ export async function buildClientStatementPdf(
   }
 
   for (const [index, line] of lines.entries()) {
+    // A voided line stays on the statement so the history reads straight, but it
+    // shows no money and is marked as cancelled.
     const detailParts = [
       line.entry.type === "DUE" ? "Due billed" : "Payment received",
       paymentMethodLabel(line.entry.method),
       line.entry.note,
-      line.entry.promisedDate
+      line.voided
+        ? `VOIDED ${formatDate(line.entry.voidedAt)}${line.entry.voidReason ? ` · ${line.entry.voidReason}` : ""}`
+        : null,
+      !line.voided && line.entry.promisedDate
         ? `Balance promised ${formatDate(line.entry.promisedDate)}${
             line.entry.promisedAmount ? ` ${formatMoneyPdf(line.entry.promisedAmount)}` : ""
           }`
@@ -688,10 +693,11 @@ export async function buildClientStatementPdf(
       });
     }
 
-    drawText(page, formatDate(line.entry.date), cols.date + CELL_PAD, y, regular, 9, INK);
+    const rowInk = line.voided ? MUTED : INK;
+    drawText(page, formatDate(line.entry.date), cols.date + CELL_PAD, y, regular, 9, rowInk);
     drawText(page, wrapped[0] ?? "", cols.details, y, regular, 9, MUTED);
-    drawText(page, line.due ? formatMoneyPdf(line.due) : "—", cols.due, y, regular, 9, INK);
-    drawText(page, line.paid ? formatMoneyPdf(line.paid) : "—", cols.paid, y, regular, 9, INK);
+    drawText(page, line.due ? formatMoneyPdf(line.due) : "—", cols.due, y, regular, 9, rowInk);
+    drawText(page, line.paid ? formatMoneyPdf(line.paid) : "—", cols.paid, y, regular, 9, rowInk);
     drawText(page, formatMoneyPdf(line.balance), cols.pending, y, bold, 9, INK);
 
     let extraY = y - 13;

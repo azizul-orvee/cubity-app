@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { BadgePercent, CopyPlus, FileDown, Pencil } from "lucide-react";
+import { BadgePercent, CopyPlus, FileDown, Pencil, UserPlus, Wallet } from "lucide-react";
 import { DeleteInvoiceButton } from "@/components/delete-buttons";
 import { InvoicePaper } from "@/components/invoice-paper";
 import { InvoicePayments } from "@/components/invoice-payments";
@@ -8,16 +8,22 @@ import { PdfDownload } from "@/components/pdf-download";
 import { formatMoney } from "@/lib/money";
 import { getInvoice, invoiceBill, invoiceDue } from "@/lib/invoice-queries";
 import { getPaymentInstructions } from "@/lib/queries";
-import { invoices } from "@/lib/routes";
+import { invoices, receivables } from "@/lib/routes";
+import { canEditReceivables } from "@/lib/workspace-role";
 
 const actionClass =
   "flex h-full min-h-[4.5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-white px-2 text-sm font-semibold ring-1 ring-border";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [invoice, payment] = await Promise.all([getInvoice(id), getPaymentInstructions()]);
+  const [invoice, payment, canEdit] = await Promise.all([
+    getInvoice(id),
+    getPaymentInstructions(),
+    canEditReceivables(),
+  ]);
   if (!invoice) notFound();
   const bill = invoiceBill(invoice);
+  const onLedger = invoice.ledgerEntries.length > 0;
 
   return (
     <div className="mx-auto grid max-w-2xl grid-cols-1 gap-6">
@@ -55,6 +61,61 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           Download
         </PdfDownload>
       </div>
+
+      <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
+        <h2 className="text-lg font-semibold tracking-tight">Client ledger</h2>
+        {invoice.client ? (
+          <>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Linked to{" "}
+              <Link href={receivables.client(invoice.client.id)} className="font-medium text-primary">
+                {invoice.client.name}
+              </Link>
+              {onLedger
+                ? ". This bill is on their ledger, so it counts towards what they owe."
+                : ". Not on their ledger yet, so it is not counted in what they owe."}
+            </p>
+            {canEdit ? (
+              <div className="mt-5 flex flex-wrap gap-3">
+                {onLedger ? null : (
+                  <Link
+                    href={invoices.ledger(invoice.id)}
+                    className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground"
+                  >
+                    <Wallet className="size-4" />
+                    Add to the ledger
+                  </Link>
+                )}
+                <Link
+                  href={invoices.client(invoice.id)}
+                  className="inline-flex min-h-12 items-center rounded-2xl bg-white px-5 text-sm font-medium ring-1 ring-border"
+                >
+                  Change client
+                </Link>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Not linked to a receivables client, so this bill is not counted in what anyone owes.
+            </p>
+            {canEdit ? (
+              <Link
+                href={invoices.client(invoice.id)}
+                className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold ring-1 ring-border"
+              >
+                <UserPlus className="size-4" />
+                Link a client
+              </Link>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                The accountant can link it from Receivables.
+              </p>
+            )}
+          </>
+        )}
+      </section>
 
       <InvoicePayments invoiceId={invoice.id} due={invoiceDue(invoice)} payments={invoice.payments} />
 

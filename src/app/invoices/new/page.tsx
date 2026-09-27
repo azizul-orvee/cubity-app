@@ -1,9 +1,13 @@
 import { InvoiceForm } from "@/components/invoice-form";
 import { getInvoice } from "@/lib/invoice-queries";
+import { getServices } from "@/lib/service-queries";
 
 export default async function NewInvoicePage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const { from } = await searchParams;
-  const template = from ? await getInvoice(from) : null;
+  const [template, catalog] = await Promise.all([
+    from ? getInvoice(from) : null,
+    getServices(),
+  ]);
 
   return (
     <div className="mx-auto grid max-w-lg grid-cols-1 gap-7">
@@ -16,7 +20,7 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
             : "Invoice ID, client name, and at least one service are required. Phone and address if you have them."}
         </p>
       </div>
-      <InvoiceForm template={template ?? undefined} />
+      <InvoiceForm template={template ?? undefined} catalog={catalog} />
     </div>
   );
 }

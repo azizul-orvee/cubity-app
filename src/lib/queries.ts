@@ -13,6 +13,26 @@ export const getClients = cache(
   }),
 );
 
+/** Just enough to pick a client when linking an invoice to one. */
+export const getClientOptions = cache(
+  cachedQuery("client-options", TAGS.clients, async () => {
+    return prisma.client.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, phone: true, siteName: true },
+    });
+  }),
+);
+
+export const getClientEvents = cache(
+  cachedQuery("client-events", TAGS.clients, async (clientId: string) => {
+    return prisma.clientEvent.findMany({
+      where: { clientId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+  }),
+);
+
 export const getClient = cache(
   cachedQuery("client", TAGS.clients, async (id: string) => {
     return prisma.client.findUnique({
