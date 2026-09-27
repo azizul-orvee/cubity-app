@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { CubityStampLoader } from "@/components/cubity-stamp-loader";
 
 const MIN_STAMP_MS = 200;
+
+/*
+ * Only a safety net, for a navigation that never resolves. It used to be 8s,
+ * which a cold function on a slow phone connection can genuinely exceed — and
+ * hiding the loader mid-load leaves the old screen looking stuck.
+ */
+const FAILSAFE_MS = 20_000;
 
 function isAppNavigation(anchor: HTMLAnchorElement) {
   if (anchor.target === "_blank") return false;
@@ -22,6 +29,7 @@ function isAppNavigation(anchor: HTMLAnchorElement) {
 
 export function RouteStamp() {
   const pathname = usePathname();
+  const search = useSearchParams().toString();
   const [pending, setPending] = useState(false);
   const shownAt = useRef(0);
   const hideTimer = useRef<number | null>(null);
@@ -37,7 +45,7 @@ export function RouteStamp() {
       setPending(false);
       shownAt.current = 0;
     }, remain);
-  }, [pathname]);
+  }, [pathname, search]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
@@ -52,7 +60,7 @@ export function RouteStamp() {
       failsafe.current = window.setTimeout(() => {
         setPending(false);
         shownAt.current = 0;
-      }, 8000);
+      }, FAILSAFE_MS);
     };
     document.addEventListener("click", onClick, true);
     return () => {

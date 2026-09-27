@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -46,7 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <NativeAppClass />
         <TooltipProvider>
           {children}
-          <RouteStamp />
+          {/* RouteStamp reads the query string, which needs a boundary here. */}
+          <Suspense fallback={null}>
+            <RouteStamp />
+          </Suspense>
           <Toaster />
         </TooltipProvider>
       </body>

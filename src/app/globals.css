@@ -208,15 +208,68 @@ select {
 }
 
 .cubity-logo-caption {
-  animation: cubity-caption 1.35s ease-out both;
+  /*
+   * Fades in once, then pulses for as long as the screen is still loading. The
+   * pulse is listed second so it wins the opacity once it starts.
+   */
+  animation:
+    cubity-caption 1.35s ease-out both,
+    cubity-caption-pulse 2s ease-in-out 1.35s infinite;
+}
+
+/*
+ * The stamp reveal above plays once, which looked like a frozen screen whenever
+ * a page took longer than the reveal. These three carry on indefinitely, so the
+ * loader keeps moving until the next screen actually arrives.
+ */
+@keyframes cubity-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cubity-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+@keyframes cubity-caption-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+
+@keyframes cubity-orbit-fade {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+
+/* An arc circling the stamp: the clearest "still working" signal there is. */
+.cubity-orbit {
+  animation: cubity-orbit 1.15s linear infinite;
+}
+
+/* Starts once the reveal has finished, so the two never fight. */
+.cubity-breathe {
+  animation: cubity-breathe 2.4s ease-in-out 1.35s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cubity-logo-paint,
   .cubity-logo-bloom,
-  .cubity-logo-rise,
-  .cubity-logo-caption {
+  .cubity-logo-rise {
     animation: none;
+  }
+  /*
+   * A reduced-motion phone still needs to know the app is working, so the
+   * spinning arc and the scale pulse are replaced by a slow fade. Opacity does
+   * not carry the vestibular problems that movement and scaling do.
+   */
+  .cubity-breathe {
+    animation: none;
+  }
+  .cubity-orbit {
+    animation: cubity-orbit-fade 2.4s ease-in-out infinite;
+  }
+  .cubity-logo-caption {
+    animation: cubity-caption-pulse 2.4s ease-in-out infinite;
   }
 }
 

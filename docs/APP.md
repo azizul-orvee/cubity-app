@@ -38,7 +38,7 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | --- | --- |
 | `/` Workspace | Cubity header and office footer. Two product cards: Receivables (opens a role popup) and Invoice maker |
 | `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp. Blocked until a role is chosen. Engineers see view-only (no add client). |
-| `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
+| `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database, and the seal keeps moving for as long as the wait lasts. |
 | `/receivables/clients/new` | Add a client: name and phone required, email and address optional (accountant only) |
 | `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF. Accountant gets Edit, Discount, Add due, and Log payment in one grid. Discount shows "None yet" or the amount. A ledger line is **voided**, never deleted: it stays in the list struck through with the date and reason, and stops counting. **Account history** below the ledger lists discount changes and voided lines |
 | `/receivables/clients/[id]/edit` | Edit the client: name and phone required; email, address, company, site, and notes optional (accountant only) |
@@ -119,7 +119,7 @@ Mobile-first visual summary (not a table dump):
 
 Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, accountant only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the accountant. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
 
-Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. Same on the website and in the Android app. Receivables and Invoice maker both run in Singapore, next to the Neon database. The invoice list and an open invoice show the same seal only while that query is still running.
+Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. The seal reveals itself once, then a teal arc circles it and the stamp breathes for as long as the screen is still coming, so a slow load never looks frozen. Switching filters on the client list counts as loading too, so the seal clears the moment those results arrive. Same on the website and in the Android app. Receivables and Invoice maker both run in Singapore, next to the Neon database. The invoice list and an open invoice show the same seal only while that query is still running.
 
 ### PDFs
 
@@ -276,6 +276,8 @@ An invoice can be **linked to a receivables client** and then **added to their l
 - `InvoicePayment` — one receipt on that invoice: amount, date, optional note. The paid total is the sum of these receipts. A later payment is another row on the same invoice, not a new invoice
 
 ## Changelog
+
+- 2026-09-27 — The loading seal keeps moving until the screen arrives. It used to play its reveal once and then sit still, which looked frozen on a slow connection. A teal arc now circles it and the stamp breathes; a phone set to reduce motion gets a slow fade instead. Changing a client-list filter also clears the seal properly, and the safety timeout that hides it went from 8 to 20 seconds so it no longer gives up during a genuinely slow load.
 
 - 2026-09-27 — The admin role is called **accountant** again, everywhere. Nothing about the password or the permissions changed.
 - 2026-09-27 — The last part of an invoice ID (C01, C02…) is optional. Leave that box empty and the ID is just the first two parts, like `CC420-2609`, with no trailing hyphen.
