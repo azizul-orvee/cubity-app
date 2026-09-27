@@ -97,9 +97,9 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
           </tbody>
         </table>
 
-        <div className="mt-4 flex items-end justify-between gap-4 border-t border-[#c7d6d6] pt-4">
+        <div className="mt-4 flex flex-col gap-4 border-t border-[#c7d6d6] pt-4 sm:flex-row sm:items-end sm:justify-between">
           <PaymentSeal paidAmount={invoice.paidAmount} total={net} />
-          <dl className="grid min-w-56 gap-1.5 text-[13px]">
+          <dl className="grid w-full gap-1.5 text-[13px] sm:w-auto sm:min-w-56">
             <div className="flex items-baseline justify-between gap-6 border-b border-[#c7d6d6] pb-1.5">
               <dt className="font-semibold">Total amount</dt>
               <dd className="text-lg font-bold tabular-nums">{formatMoney(total)}</dd>
