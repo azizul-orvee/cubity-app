@@ -32,10 +32,14 @@ function cleanIdPart(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+/**
+ * Two or three parts. The last part is optional, so both CC420-2609-C01 and
+ * CC420-2609 split cleanly back into the three boxes.
+ */
 function splitInvoiceId(number: string) {
-  const match = number.toUpperCase().match(/^([A-Z0-9]+)-([A-Z0-9]+)-([A-Z0-9]+)$/);
+  const match = number.toUpperCase().match(/^([A-Z0-9]+)-([A-Z0-9]+)(?:-([A-Z0-9]+))?$/);
   if (!match) return null;
-  return { prefix: match[1], code: match[2], suffix: match[3] };
+  return { prefix: match[1], code: match[2], suffix: match[3] ?? "" };
 }
 
 function revealField(event: FocusEvent<HTMLElement>) {
@@ -121,7 +125,7 @@ export function InvoiceForm({
   const todayRef = useRef(todayInputValue());
   const issueDateRef = useRef(initialIssueDate);
   const codeTouchedRef = useRef(false);
-  const composedId = `${prefix}-${code}-${suffix}`;
+  const composedId = suffix ? `${prefix}-${code}-${suffix}` : `${prefix}-${code}`;
 
   function applyIssueDate(next: string) {
     issueDateRef.current = next;
@@ -243,14 +247,14 @@ export function InvoiceForm({
                   onFocus={revealField}
                 />
                 <Input
-                  required
-                  aria-label="Invoice ID end"
+                  aria-label="Invoice ID end (optional)"
                   autoCapitalize="characters"
                   autoComplete="off"
                   autoCorrect="off"
                   spellCheck={false}
                   enterKeyHint="next"
                   maxLength={16}
+                  placeholder="—"
                   value={suffix}
                   onChange={(event) => setSuffix(cleanIdPart(event.target.value))}
                   className={cn(fieldClass, "font-semibold tracking-wide")}
@@ -263,7 +267,9 @@ export function InvoiceForm({
           <p className="text-sm text-muted-foreground">
             {legacyId
               ? "Capital letters, numbers, and hyphens only."
-              : `${composedId}. Change any part if you need to.`}
+              : `${composedId}. Change any part if you need to. The last box is optional${
+                  suffix ? "" : " and empty, so the ID is just two parts"
+                }.`}
           </p>
         </div>
         <div className="grid gap-2.5">

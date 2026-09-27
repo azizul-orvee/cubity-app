@@ -73,7 +73,7 @@ export async function clearWorkspaceRole() {
 
 export async function requireAccountant() {
   if (!(await canEditReceivables())) {
-    return { error: "Only the CEO can change this." };
+    return { error: "Only the accountant can change this." };
   }
   return null;
 }

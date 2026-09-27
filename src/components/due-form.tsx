@@ -45,7 +45,7 @@ export function DueForm({
     if (!billedAmount) return "Enter what became due today, then how much they paid now.";
     if (remainingThisVisit < 0) return "Amount received is higher than the billed amount.";
     if (remainingTotal <= 0) return "This visit settles the account.";
-    return `Remaining after this visit: ${formatMoney(remainingTotal)}. Set the promised date.`;
+    return `Remaining after this visit: ${formatMoney(remainingTotal)}. Add a promised date if they gave one.`;
   }, [billedAmount, remainingThisVisit, remainingTotal]);
 
   return (
@@ -85,8 +85,16 @@ export function DueForm({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="promisedDate">Promised date for remaining</Label>
-          <Input id="promisedDate" name="promisedDate" type="date" required={billedAmount > 0 && remainingTotal > 0} />
+          <Label htmlFor="promisedDate">
+            Promised date for remaining{" "}
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input id="promisedDate" name="promisedDate" type="date" />
+          {billedAmount > 0 && remainingTotal > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Leave it blank if they did not name a day. They will show as unscheduled.
+            </p>
+          ) : null}
         </div>
         {remainingTotal > 0 && billedAmount > 0 ? (
           <div className="grid gap-2">

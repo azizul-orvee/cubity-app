@@ -158,10 +158,9 @@ export async function addInvoiceToLedger(invoiceId: string, formData: FormData) 
 
   const alreadyPaid = sumPayments(invoice.payments);
   const remainingAfter = totals(client.entries, client.discountAmount).outstanding + net - alreadyPaid;
-  if (remainingAfter > 0 && !promisedDate) {
-    return { error: "Set the date they promised to pay the remaining amount." };
-  }
-  const promisedAmount = remainingAfter > 0 ? resolvePromisedAmount(formData, remainingAfter) : null;
+  // Optional, like everywhere else in receivables.
+  const promisedAmount =
+    remainingAfter > 0 && promisedDate ? resolvePromisedAmount(formData, remainingAfter) : null;
   const promise = remainingAfter > 0 ? promisedDate : null;
   const note = `Invoice ${invoice.number}`;
 

@@ -94,7 +94,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           {canEdit ? null : (
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#F6FAFA] px-3 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
               <Lock className="size-3" />
-              CEO only
+              Accountant only
             </span>
           )}
         </div>
@@ -149,8 +149,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
         {canEdit ? null : (
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            Ask the CEO to create the link. Anyone can write an invoice, but putting a bill on a
-            client&apos;s ledger changes what the office is owed, so it needs the CEO.
+            Ask the accountant to create the link. Anyone can write an invoice, but putting a bill on
+            a client&apos;s ledger changes what the office is owed, so it needs the accountant.
           </p>
         )}
       </section>

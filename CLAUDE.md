@@ -49,7 +49,7 @@ Next.js 16 App Router, React 19, Prisma 6 on Neon Postgres, Tailwind 4 with shad
 **Workspace hub, not a single app.** `/` (`src/app/page.tsx`) shows product cards. Each product owns `src/app/<slug>/`:
 
 - `receivables/` — dues, payments, promises, dashboard, PDFs. Its layout is `force-dynamic` with `preferredRegion = "sin1"` (next to Neon), and it wraps pages in `AppShell`, or the role picker when there's no role cookie.
-- `invoices/` — the invoice maker, with `InvoiceShell` chrome and **no role gate**: anyone who opens the hub card can create, edit, and delete invoices. Everything that touches receivables *is* CEO-gated: both bridge screens (`/invoices/[id]/client`, `/ledger`), all three actions in `invoice-ledger-actions.ts`, and the `clientId` field inside `saveInvoice` (`readClientLink` ignores it for non-CEOs, so a tampered form can't relink a bill). Keep it that way: `invoice-actions.ts` must never write `Client` or `LedgerEntry`.
+- `invoices/` — the invoice maker, with `InvoiceShell` chrome and **no role gate**: anyone who opens the hub card can create, edit, and delete invoices. Everything that touches receivables *is* accountant-gated: both bridge screens (`/invoices/[id]/client`, `/ledger`), all three actions in `invoice-ledger-actions.ts`, and the `clientId` field inside `saveInvoice` (`readClientLink` ignores it unless the caller is the accountant, so a tampered form can't relink a bill). Keep it that way: `invoice-actions.ts` must never write `Client` or `LedgerEntry`.
 - Hub-style screens use `SiteChrome`. To add a product, follow `.cursor/skills/add-cubity-product/SKILL.md`: routes helper, folder, hub card, docs.
 
 **Paths:** every link and redirect goes through the helpers in `src/lib/routes.ts` (`receivables.*`, `invoices.*`). Never hard-code `/receivables/...` or `/invoices/...`. Old `/clients` and `/reports/outstanding` URLs redirect through `next.config.ts`.
@@ -80,9 +80,7 @@ Next.js 16 App Router, React 19, Prisma 6 on Neon Postgres, Tailwind 4 with shad
 
 ### Roles (receivables only)
 
-**The admin role is called "CEO" in the UI and `accountant` in the code** — the identifier, the cookie token, and `requireAccountant()` keep the old name on purpose, so renaming the label didn't invalidate everyone's cookie and log the office out. Don't "fix" the mismatch without deciding to sign everyone out.
-
-`src/lib/workspace-role.ts` stores accountant or engineer in an httpOnly cookie holding a sha256 role token (`cubity_role`, ~400 days). The password is checked in code with a timing-safe compare. The CEO can write; engineer is view-only. Enforce this in **both** places:
+`src/lib/workspace-role.ts` stores accountant or engineer in an httpOnly cookie holding a sha256 role token (`cubity_role`, ~400 days). The password is checked in code with a timing-safe compare. The accountant can write; engineer is view-only. The role is called **accountant** in the UI and in the code — keep them in step. Enforce this in **both** places:
 
 - Hide write controls when `canEdit` is false.
 - In every write server action: `const denied = await requireAccountant(); if (denied) return denied;`. Write *pages* call `await redirectUnlessAccountant(...)` instead (it redirects rather than returning an error).
@@ -112,12 +110,12 @@ The pattern in every form: `"use client"`, `useActionState` wrapping a `.bind(nu
 - **The ledger is append-only.** Nothing deletes a `LedgerEntry`; `voidEntry` stamps `voidedAt` instead. A voided line stays visible (struck through on screen, marked `VOIDED` on the statement) and is excluded from every total through `activeEntries()` in `ledger.ts`. If you add a computation over entries, filter through that helper or the balance will silently include cancelled money.
 - `ClientEvent` — account history that is not money: `DISCOUNT_SET`, `DISCOUNT_REMOVED`, `ENTRY_VOIDED`. Written in the same transaction as the change it records, shown as "Account history" on the client page.
 - `src/lib/ledger.ts` computes everything: `runningLedger`, `totals`, `openDues` (FIFO — payments then the discount are applied oldest-due-first), `agingBucket` (current / 1–30 / 31–60 / 61–90 / 90+), `clientStatus`, `companySnapshot`, `monthlySeries`, plus `whatsappHref` (BD `01…` → `880…`) and `telHref`.
-- **A promise is mandatory whenever money is still outstanding after the save.** Both `recordSiteVisit` and `recordPayment` reject a save that leaves a balance with no `promisedDate`. A blank promised *amount* means "the whole leftover"; a smaller number means an installment. When the balance reaches zero, both promise fields are cleared.
+- **A promise is optional.** `recordSiteVisit`, `recordPayment`, and `addInvoiceToLedger` all accept a blank `promisedDate`, because clients often leave without naming a day. Without a date the client is neither overdue nor upcoming — `clientStatus` reports them as unscheduled and `companySnapshot` files the money under `mix.later` — but the balance still counts. A blank promised *amount* means "the whole leftover"; a smaller number means an installment. A promised amount is only stored alongside a date, and when the balance reaches zero both fields are cleared.
 - Overpayment is allowed and surfaces as credit/advance.
 
 **Invoices**
 
-- `Invoice` — `number` is the human-typed unique ID (e.g. `CC420-2609-C01`; regex `^[A-Z0-9]+(-[A-Z0-9]+)*$`, upper-cased, ≤40 chars). The middle segment starts as `invoiceYearMonthCode` — September 2026 → `2609`. Plus client fields, `issueDate`, `discountAmount`, `notes`, and an optional `clientId` linking it to a receivables `Client`.
+- `Invoice` — `number` is the human-typed unique ID (e.g. `CC420-2609-C01`; regex `^[A-Z0-9]+(-[A-Z0-9]+)*$`, upper-cased, ≤40 chars). The form composes it from three boxes; **the third is optional**, giving `CC420-2609` with no trailing hyphen, and `splitInvoiceId` parses two- or three-part IDs back into the boxes. The middle segment starts as `invoiceYearMonthCode` — September 2026 → `2609`. Plus client fields, `issueDate`, `discountAmount`, `notes`, and an optional `clientId` linking it to a receivables `Client`.
 - `InvoiceLine` — a **snapshot** of the service name and amount, so renaming a service later never rewrites old invoices. Ordered by `sortOrder`.
 - `InvoicePayment` — one receipt: amount, date, optional note. **The paid total is never stored.** `getInvoice` / `getInvoices` derive `paidAmount` with `sumPayments()`, so the screen, the PDF, the file name, and the seal cannot disagree with the receipt rows. Don't reintroduce a stored column.
 - Status (`paid` / `partial` / `unpaid`) and the PDF filename come from `src/lib/invoice-queries.ts` (`sumPayments`, `invoiceBill`, `invoiceDue`, `invoicePayStatus`, `invoicePdfFilename`).

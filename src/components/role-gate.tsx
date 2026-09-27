@@ -59,7 +59,7 @@ export function RoleGate({
             <DialogHeader>
               <DialogTitle>Who&apos;s opening Receivables?</DialogTitle>
               <DialogDescription>
-                The CEO can add and edit. Engineers can only view.
+                Accountants can add and edit. Engineers can only view.
               </DialogDescription>
             </DialogHeader>
             <div className="cb-stagger grid gap-3">
@@ -72,7 +72,7 @@ export function RoleGate({
                   <Calculator className="size-5" strokeWidth={1.75} />
                 </span>
                 <span>
-                  <span className="block text-base font-semibold">CEO</span>
+                  <span className="block text-base font-semibold">Accountant</span>
                   <span className="mt-0.5 block text-sm text-muted-foreground">
                     Add clients, dues, and payments
                   </span>
@@ -99,8 +99,8 @@ export function RoleGate({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>CEO password</DialogTitle>
-              <DialogDescription>Only the CEO can change the books.</DialogDescription>
+              <DialogTitle>Accountant password</DialogTitle>
+              <DialogDescription>Only the office accountant can change the books.</DialogDescription>
             </DialogHeader>
             <form action={action} className="grid gap-4">
               {state?.error ? (

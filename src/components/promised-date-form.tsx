@@ -21,7 +21,9 @@ export function PromisedDateForm({
   return (
     <form action={updatePromisedDate.bind(null, clientId)} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="promisedDate">Promised pay date</Label>
+        <Label htmlFor="promisedDate">
+          Promised pay date <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
         <Input
           id="promisedDate"
           name="promisedDate"

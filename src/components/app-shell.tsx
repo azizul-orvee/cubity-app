@@ -48,7 +48,7 @@ export function AppShell({
                 CUBITY
               </span>
               <span className="block text-[11px] text-muted-foreground">
-                {canEdit ? "Receivables · CEO" : "Receivables · view only"}
+                {canEdit ? "Receivables" : "Receivables · view only"}
               </span>
             </span>
           </Link>

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { addInvoiceToLedger } from "@/lib/invoice-ledger-actions";
-import { addDaysToInput, toInputValue, todayInputValue } from "@/lib/dates";
+import { toInputValue, todayInputValue } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,19 +91,17 @@ export function InvoiceLedgerForm({
         <>
           <div className="grid gap-2.5">
             <Label htmlFor="ledger-promised" className="text-base">
-              Promised payment date
+              Promised payment date <span className="font-normal text-muted-foreground">(optional)</span>
             </Label>
             <Input
               id="ledger-promised"
               name="promisedDate"
               type="date"
-              required
               min={todayInputValue()}
-              defaultValue={addDaysToInput(7)}
               className={fieldClass}
             />
             <p className="text-sm text-muted-foreground">
-              Required while money is still due, so the bill shows up in the follow-up queue.
+              A date puts the bill in the follow-up queue. Leave it blank and they show as unscheduled.
             </p>
           </div>
           <div className="grid gap-2.5">

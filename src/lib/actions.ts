@@ -208,11 +208,12 @@ export async function recordSiteVisit(clientId: string, formData: FormData) {
     return { error: "Client not found." };
   }
 
+  // A client who leaves without naming a day is normal, so the promise is
+  // optional. Without a date they simply show as unscheduled instead of
+  // appearing in the overdue or upcoming queues.
   const remainingAfter = totals(existing.entries, existing.discountAmount).outstanding + billed - received;
-  if (remainingAfter > 0 && !promisedDate) {
-    return { error: "Set the date they promised to pay the remaining amount." };
-  }
-  const promisedAmount = remainingAfter > 0 ? resolvePromisedAmount(formData, remainingAfter) : null;
+  const promisedAmount =
+    remainingAfter > 0 && promisedDate ? resolvePromisedAmount(formData, remainingAfter) : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.ledgerEntry.create({
@@ -284,10 +285,9 @@ export async function recordPayment(clientId: string, formData: FormData) {
   const current = totals(client.entries, client.discountAmount);
   const remainingAfter = current.outstanding - amount;
 
-  if (remainingAfter > 0 && !promisedDate) {
-    return { error: "They still have a due. Set the next promised payment date." };
-  }
-  const promisedAmount = remainingAfter > 0 ? resolvePromisedAmount(formData, remainingAfter) : null;
+  // The next date is optional. No date means unscheduled, not invalid.
+  const promisedAmount =
+    remainingAfter > 0 && promisedDate ? resolvePromisedAmount(formData, remainingAfter) : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.ledgerEntry.create({

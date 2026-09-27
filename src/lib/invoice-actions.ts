@@ -76,8 +76,8 @@ function readInvoiceId(formData: FormData) {
  * The hidden client link the form carries, so editing a bill never drops it.
  *
  * Writing invoices is open to anyone, but pointing a bill at a receivables
- * client is a receivables change, so only the CEO may set or clear it. Everyone
- * else keeps whatever the bill already had, whatever the form says.
+ * client is a receivables change, so only the accountant may set or clear it.
+ * Everyone else keeps whatever the bill already had, whatever the form says.
  */
 async function readClientLink(formData: FormData, current: string | null) {
   if (!(await canEditReceivables())) return { clientId: current };

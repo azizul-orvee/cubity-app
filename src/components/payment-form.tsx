@@ -102,16 +102,16 @@ export function PaymentForm({
         {stillDue ? (
           <div className="grid gap-2">
             <Label htmlFor="promisedDate" className="text-base">
-              Next promised date
+              Next promised date <span className="font-normal text-muted-foreground">(optional)</span>
             </Label>
             <p className="text-sm text-muted-foreground">
-              {formatMoney(remaining)} will still be due. When will they pay the rest?
+              {formatMoney(remaining)} will still be due. Add the day they said they would pay the rest,
+              or leave it blank if they did not say.
             </p>
             <Input
               id="promisedDate"
               name="promisedDate"
               type="date"
-              required
               className={fieldClass}
             />
             <Label htmlFor="promisedAmount" className="text-base">
