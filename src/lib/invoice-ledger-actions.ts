@@ -31,7 +31,62 @@ function resolvePromisedAmount(formData: FormData, remaining: number) {
   return Math.min(taka * 100, remaining);
 }
 
-/** Point this invoice at a receivables client, or clear the link. */
+/**
+ * Make a brand new receivables client out of what the invoice already says, and
+ * link the bill to them. Most bills are for someone who is not on the ledger
+ * yet, so re-typing their name and phone into Receivables first is wasted work.
+ */
+export async function createClientFromInvoice(invoiceId: string, formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: { id: true, ledgerEntries: { where: { voidedAt: null }, select: { id: true } } },
+  });
+  if (!invoice) return { error: "That invoice is no longer here." };
+  if (invoice.ledgerEntries.length > 0) {
+    return { error: "This bill is already on a client's ledger. Void those entries first." };
+  }
+
+  const name = formString(formData, "name").trim();
+  const phone = formString(formData, "phone").trim();
+  const address = formString(formData, "address").trim();
+  const siteName = formString(formData, "siteName").trim();
+
+  if (!name) return { error: "Enter the client's name." };
+  if (phone.length < 3) {
+    return { error: "A client needs a phone number, so the office can call or WhatsApp them." };
+  }
+
+  // Two ledgers for the same person is the mistake worth preventing here.
+  const sharesPhone = await prisma.client.findFirst({
+    where: { phone },
+    select: { name: true },
+  });
+  if (sharesPhone) {
+    return {
+      error: `${sharesPhone.name} already uses that phone number. Pick them from the list instead, or change the number.`,
+    };
+  }
+
+  const client = await prisma.client.create({
+    data: {
+      name,
+      phone,
+      address: address || null,
+      siteName: siteName || null,
+    },
+  });
+
+  await prisma.invoice.update({ where: { id: invoiceId }, data: { clientId: client.id } });
+
+  revalidateClient(client.id);
+  revalidateInvoices(invoiceId);
+  redirect(invoices.invoice(invoiceId));
+}
+
+/** Point this invoice at an existing receivables client, or clear the link. */
 export async function setInvoiceClient(invoiceId: string, formData: FormData) {
   const denied = await requireAccountant();
   if (denied) return denied;

@@ -98,7 +98,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         ) : (
           <>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Not linked to a receivables client, so this bill is not counted in what anyone owes.
+              Not linked to a receivables client, so this bill is not counted in what anyone owes. You
+              can add them as a new client from the invoice details, or point it at someone already on
+              the ledger.
             </p>
             {canEdit ? (
               <Link
@@ -106,7 +108,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold ring-1 ring-border"
               >
                 <UserPlus className="size-4" />
-                Link a client
+                Add or link a client
               </Link>
             ) : (
               <p className="mt-3 text-sm text-muted-foreground">

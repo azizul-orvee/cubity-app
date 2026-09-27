@@ -22,8 +22,9 @@ export default async function InvoiceClientPage({ params }: { params: Promise<{ 
         <p className="mt-4 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">{invoice.number}</p>
         <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Link a client</h1>
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-          Billed to {invoice.clientName}. Linking the bill to a receivables client lets you put it on
-          their ledger, and puts the invoice number on their due statement.
+          Billed to {invoice.clientName}. Add them to Receivables as a new client, or point this bill at
+          someone already on the ledger. Either way you can then put it on their ledger, and the invoice
+          number shows up on their due statement.
         </p>
       </div>
       <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
@@ -31,7 +32,12 @@ export default async function InvoiceClientPage({ params }: { params: Promise<{ 
           invoiceId={invoice.id}
           clients={clients}
           currentClientId={invoice.clientId}
-          suggestedName={invoice.clientName}
+          contact={{
+            clientName: invoice.clientName,
+            clientPhone: invoice.clientPhone,
+            clientAddress: invoice.clientAddress,
+            projectName: invoice.projectName,
+          }}
         />
       </section>
     </div>
