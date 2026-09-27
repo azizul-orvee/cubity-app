@@ -3,6 +3,7 @@
 import { useActionState, type FocusEvent } from "react";
 import type { Client } from "@prisma/client";
 import { createClient, updateClient } from "@/lib/actions";
+import { formatMoney, poishaToInput } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +21,7 @@ function revealField(event: FocusEvent<HTMLElement>) {
   }, 120);
 }
 
-export function ClientForm({ client }: { client?: Client }) {
+export function ClientForm({ client, billed = 0 }: { client?: Client; billed?: number }) {
   const isNew = !client;
   const bound = client ? updateClient.bind(null, client.id) : createClient;
   const [state, formAction] = useActionState(async (_prev: State, formData: FormData) => {
@@ -129,7 +130,9 @@ export function ClientForm({ client }: { client?: Client }) {
               />
             </div>
             <div className="grid gap-2.5">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">
+                Notes <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Textarea
                 id="notes"
                 name="notes"
@@ -138,6 +141,28 @@ export function ClientForm({ client }: { client?: Client }) {
                 className="min-h-28 text-base"
                 onFocus={revealField}
               />
+            </div>
+            <div className="grid gap-2.5">
+              <Label htmlFor="discount" className="text-base">
+                Discount (Tk) <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="discount"
+                name="discount"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                enterKeyHint="done"
+                defaultValue={poishaToInput(client.discountAmount)}
+                placeholder="0"
+                className={fieldClass}
+                onFocus={revealField}
+              />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {billed > 0
+                  ? `Taken off the billed total of ${formatMoney(billed)} on this account and on the due statement. Leave blank for none.`
+                  : "Taken off the billed total on this account and on the due statement. Add a due first if there is nothing billed yet."}
+              </p>
             </div>
           </>
         ) : null}

@@ -4,13 +4,14 @@ import { formatDate } from "@/lib/dates";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { COMPANY, companyAddressLine, companyPhoneLine, type PaymentInstructions } from "@/lib/company";
 import type { InvoicePdfData } from "@/lib/pdf";
-import { formatMoney } from "@/lib/money";
+import { clampDiscount, formatMoney } from "@/lib/money";
 import { PaymentSeal } from "@/components/payment-seal";
 
 /** The invoice on screen, laid out like the downloaded PDF. */
 export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; payment: PaymentInstructions }) {
   const total = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
-  const due = total - invoice.paidAmount;
+  const { discount, net } = clampDiscount(total, invoice.discountAmount ?? 0);
+  const due = net - invoice.paidAmount;
   const showBkash = Boolean(payment.bkashNumber.trim());
   const showBank = Boolean(payment.bankAccountNumber.trim() && payment.bankName.trim());
 
@@ -53,6 +54,18 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
                 <span className="text-[#475257]">Total amount</span>
                 <span className="font-semibold tabular-nums">{formatMoney(total)}</span>
               </p>
+              {discount > 0 ? (
+                <>
+                  <p className="flex justify-between gap-3">
+                    <span className="text-[#475257]">Discount</span>
+                    <span className="tabular-nums">{formatMoney(discount)}</span>
+                  </p>
+                  <p className="flex justify-between gap-3">
+                    <span className="text-[#475257]">After discount</span>
+                    <span className="font-semibold tabular-nums">{formatMoney(net)}</span>
+                  </p>
+                </>
+              ) : null}
               {invoice.payments.map((payment, index) => (
                 <p key={`${payment.date.toISOString()}-${index}`} className="flex justify-between gap-3">
                   <span className="text-[#475257]">{formatDate(payment.date)}</span>
@@ -85,12 +98,24 @@ export function InvoicePaper({ invoice, payment }: { invoice: InvoicePdfData; pa
         </table>
 
         <div className="mt-4 flex items-end justify-between gap-4 border-t border-[#c7d6d6] pt-4">
-          <PaymentSeal paidAmount={invoice.paidAmount} total={total} />
+          <PaymentSeal paidAmount={invoice.paidAmount} total={net} />
           <dl className="grid min-w-56 gap-1.5 text-[13px]">
             <div className="flex items-baseline justify-between gap-6 border-b border-[#c7d6d6] pb-1.5">
               <dt className="font-semibold">Total amount</dt>
               <dd className="text-lg font-bold tabular-nums">{formatMoney(total)}</dd>
             </div>
+            {discount > 0 ? (
+              <>
+                <div className="flex justify-between gap-6">
+                  <dt className="text-[#475257]">Discount</dt>
+                  <dd className="tabular-nums">{formatMoney(discount)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-6 border-b border-[#c7d6d6] pb-1.5">
+                  <dt className="font-semibold">After discount</dt>
+                  <dd className="text-lg font-bold tabular-nums">{formatMoney(net)}</dd>
+                </div>
+              </>
+            ) : null}
             <div className="flex justify-between gap-6">
               <dt className="text-[#475257]">Paid</dt>
               <dd className="tabular-nums">{formatMoney(invoice.paidAmount)}</dd>

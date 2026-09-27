@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { cachedQuery, TAGS } from "@/lib/data-cache";
+import { clampDiscount } from "@/lib/money";
 
 export const getInvoices = cache(
   cachedQuery("invoices", TAGS.invoices, async () => {
@@ -13,6 +14,7 @@ export const getInvoices = cache(
         issueDate: true,
         createdAt: true,
         paidAmount: true,
+        discountAmount: true,
         lines: { select: { amount: true } },
       },
     });
@@ -35,8 +37,12 @@ export function invoiceTotal(lines: { amount: number }[]) {
   return lines.reduce((sum, line) => sum + line.amount, 0);
 }
 
-export function invoiceDue(invoice: { paidAmount: number; lines: { amount: number }[] }) {
-  return invoiceTotal(invoice.lines) - invoice.paidAmount;
+export function invoiceBill(invoice: { discountAmount?: number | null; lines: { amount: number }[] }) {
+  return clampDiscount(invoiceTotal(invoice.lines), invoice.discountAmount ?? 0);
+}
+
+export function invoiceDue(invoice: { paidAmount: number; discountAmount?: number | null; lines: { amount: number }[] }) {
+  return invoiceBill(invoice).net - invoice.paidAmount;
 }
 
 export type InvoicePayStatus = "paid" | "unpaid" | "partial";

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { TAGS } from "@/lib/data-cache";
 import { parseDateInput } from "@/lib/dates";
+import { clampDiscount } from "@/lib/money";
 import { invoices } from "@/lib/routes";
 
 function wholeTakaToPoisha(raw: string) {
@@ -29,6 +30,7 @@ function revalidateInvoices(id?: string) {
   if (id) {
     revalidatePath(invoices.invoice(id));
     revalidatePath(invoices.edit(id));
+    revalidatePath(invoices.discount(id));
   }
 }
 
@@ -58,15 +60,25 @@ function readLines(formData: FormData) {
   return { lines };
 }
 
-/** Invoice ID: capital letters and numbers, optionally joined by single hyphens, e.g. CC420-2509-C01. */
+/** Invoice ID: capital letters and numbers, optionally joined by single hyphens, e.g. CC420-2609-C01. */
 const INVOICE_ID = /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
+
+function readDiscount(raw: string, gross: number) {
+  const trimmed = raw.trim();
+  if (!trimmed) return { discountAmount: 0 };
+  if (!/^\d+$/.test(trimmed)) return { error: "Discount must be a whole number. No letters or fractions." };
+  const amount = wholeTakaToPoisha(trimmed);
+  if (amount == null) return { error: "Enter a valid discount." };
+  if (amount > gross) return { error: "Discount cannot be more than the invoice total." };
+  return { discountAmount: amount };
+}
 
 function readInvoiceId(formData: FormData) {
   const number = formString(formData, "number").trim().toUpperCase();
   if (!number) return { error: "Enter an invoice ID." };
   if (number.length > 40) return { error: "Invoice ID is too long. Keep it under 40 characters." };
   if (!INVOICE_ID.test(number)) {
-    return { error: "Invoice ID can only use capital letters, numbers, and hyphens, like CC420-2509-C01." };
+    return { error: "Invoice ID can only use capital letters, numbers, and hyphens, like CC420-2609-C01." };
   }
   return { number };
 }
@@ -96,6 +108,9 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   if (lines.length === 0) return { error: "Select at least one service and enter its amount." };
 
   const billed = lines.reduce((sum, line) => sum + line.amount, 0);
+  const discount = readDiscount(formString(formData, "discount"), billed);
+  if ("error" in discount) return discount;
+  const net = clampDiscount(billed, discount.discountAmount).net;
 
   const [taken, existing] = await Promise.all([
     prisma.invoice.findUnique({ where: { number }, select: { id: true } }),
@@ -105,14 +120,14 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
 
   if (invoiceId) {
     if (!existing) return { error: "That invoice is no longer here." };
-    if (billed < existing.paidAmount) {
-      return { error: "This total is lower than the payments already recorded. Remove a payment on the invoice first." };
+    if (net < existing.paidAmount) {
+      return { error: "This total after discount is lower than the payments already recorded. Remove a payment on the invoice first." };
     }
     await prisma.$transaction([
       prisma.invoiceLine.deleteMany({ where: { invoiceId } }),
       prisma.invoice.update({
         where: { id: invoiceId },
-        data: { ...parsed.data, number, issueDate, lines: { create: lines } },
+        data: { ...parsed.data, number, issueDate, discountAmount: discount.discountAmount, lines: { create: lines } },
       }),
     ]);
     revalidateInvoices(invoiceId);
@@ -128,7 +143,7 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
     if (parsedPaid == null) return { error: "Enter a valid paid amount." };
     paidAmount = parsedPaid;
   }
-  if (paidAmount > billed) return { error: "Paid amount is higher than the invoice total." };
+  if (paidAmount > net) return { error: "Paid amount is higher than the total after discount." };
   if (paidAmount > 0) {
     paidDate = parseDateInput(formString(formData, "paidDate"));
     if (!paidDate) return { error: "Choose the date of this payment." };
@@ -140,12 +155,39 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
       ...parsed.data,
       issueDate,
       paidAmount,
+      discountAmount: discount.discountAmount,
       lines: { create: lines },
       payments: paidDate ? { create: { amount: paidAmount, date: paidDate } } : undefined,
     },
   });
   revalidateInvoices(created.id);
   redirect(invoices.invoice(created.id));
+}
+
+export async function setInvoiceDiscount(invoiceId: string, formData: FormData) {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: { paidAmount: true, lines: { select: { amount: true } } },
+  });
+  if (!invoice) return { error: "That invoice is no longer here." };
+
+  const billed = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
+  const discount =
+    formString(formData, "remove") === "1"
+      ? { discountAmount: 0 }
+      : readDiscount(formString(formData, "discount"), billed);
+  if ("error" in discount) return discount;
+  const net = clampDiscount(billed, discount.discountAmount).net;
+  if (net < invoice.paidAmount) {
+    return { error: "This discount would put the total below what has already been paid. Remove a payment first." };
+  }
+
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { discountAmount: discount.discountAmount },
+  });
+  revalidateInvoices(invoiceId);
+  redirect(invoices.invoice(invoiceId));
 }
 
 export async function recordInvoicePayment(invoiceId: string, formData: FormData) {
@@ -164,6 +206,7 @@ export async function recordInvoicePayment(invoiceId: string, formData: FormData
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     select: {
+      discountAmount: true,
       lines: { select: { amount: true } },
       payments: { select: { amount: true } },
     },
@@ -171,8 +214,9 @@ export async function recordInvoicePayment(invoiceId: string, formData: FormData
   if (!invoice) return { error: "That invoice is no longer here." };
 
   const billed = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
+  const net = clampDiscount(billed, invoice.discountAmount).net;
   const already = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
-  if (already + amount > billed) return { error: "That payment is higher than what is still due." };
+  if (already + amount > net) return { error: "That payment is higher than what is still due." };
 
   await prisma.$transaction([
     prisma.invoicePayment.create({ data: { invoiceId, amount, date, note } }),

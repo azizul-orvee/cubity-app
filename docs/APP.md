@@ -40,16 +40,18 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp. Blocked until a role is chosen. Engineers see view-only (no add client). |
 | `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
 | `/receivables/clients/new` | Add a client: name and phone required, email and address optional (accountant only) |
-| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF; accountant can edit, add due, pay, delete |
-| `/receivables/clients/[id]/edit` | Edit profile (accountant only) |
+| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF. Accountant gets Edit, Discount, Add due, and Log payment in one grid. Discount shows "None yet" or the amount |
+| `/receivables/clients/[id]/edit` | Edit the client: name and phone required; email, address, company, site, and notes optional (accountant only) |
+| `/receivables/clients/[id]/discount` | Set or remove the account discount (accountant only). Whole Tk, cannot exceed the billed total. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the client page, the dashboard, and the due-statement PDF. Remove discount clears it |
 | `/receivables/clients/[id]/due` | Add a due / site visit (accountant only) |
 | `/receivables/clients/[id]/pay` | Log a payment (accountant only) |
 | `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim-due-statement.pdf`), including bKash and bank payment details |
 | `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
 | `/invoices` | Every invoice, newest first, grouped by the day it was created (Today, Yesterday, then the date). Search by client or invoice number. Bottom nav: Invoices, Services, and New. No accountant gate. |
-| `/invoices/new` | New invoice in cards: Invoice (required invoice ID, issue date), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (optional first receipt: amount and date, with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills a new bill from another invoice (ID left blank, payments are not copied, date is today) |
-| `/invoices/[id]` | The invoice shown like the PDF, plus a Payments card to record another receipt (amount, date, optional note) or remove one. The document lists every receipt with its date, then billed, paid, and still due, and a paid / partial / unpaid Cubity seal. Buttons: Edit, New from this, Download. Delete sits below and asks for confirmation first |
+| `/invoices/new` | New invoice in cards: Invoice (required invoice ID in three parts — start, middle, end — all editable; the middle starts as the year and month, so September 2026 is 2609, plus the issue date), Discount (optional whole Tk, directly under the invoice card, taken off the service total; clear it to remove), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (optional first receipt: amount and date, with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills a new bill from another invoice (a fresh ID, payments are not copied, date is today) |
+| `/invoices/[id]` | The invoice shown like the PDF, plus a Payments card to record another receipt (amount, date, optional note) or remove one. The document lists every receipt with its date, then billed, discount when set, total after discount, paid, and still due, and a paid / partial / unpaid Cubity seal. Buttons: Edit, Discount, New from this, Download. Discount shows "None yet" or the amount. Delete sits below and asks for confirmation first |
+| `/invoices/[id]/discount` | Set or remove this invoice's discount. Whole Tk, cannot exceed the service total or drop the total below what is already paid. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the invoice screen and the PDF. Remove discount clears it |
 | `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts. Payments stay as they are. Saving is blocked if the new total is below what has already been paid |
 | `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. Each receipt is listed once, in the amount-due box, with its date. Under the particulars, total amount, paid, and total due sit beside the Cubity seal. The ID is printed under INVOICE in the letterhead |
 | `/invoices/services` | Add a service at the top, then rename or remove each one in the list (remove shows Undo). The list stays on this phone. Defaults are the five design services |
@@ -84,7 +86,7 @@ The chosen role stays in an httpOnly cookie until you tap **Log out** in the Rec
 
 - Required: name, phone
 - Optional on add: email, address
-- Company, site/project, and notes can be filled later on edit
+- Company, site/project, and notes can be filled later on edit. The accountant opens **Edit** on the client page for the name, phone, and the rest. **Discount** sits in the same button grid as Edit, Add due, and Log payment. It is whole Tk, cannot be more than the amount billed, and can be removed. Outstanding, the dashboard, and the due statement use billed minus that discount
 - Call (`tel:`) and WhatsApp on the profile. WhatsApp opens that client's chat with the message "Assalamualaikum" and nothing else. Bangladesh `01…` numbers are sent as `880…`.
 
 ### Dues and payments
@@ -119,7 +121,7 @@ Opening Clients (or a client account) from Home shows the **Cubity seal** only w
 
 ### PDFs
 
-- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance), a gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
+- Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance). When a discount is set, the panel and the totals under the ledger also show Discount and Total after discount, and the amount still pending is the billed total minus discount minus what was paid. A gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
 - Payment details are edited at `/receivables/settings` (gear in the receivables header). Defaults: bKash `01973 914236`; NRB Bank, Sylhet Main Branch, MD TAREK AHMED, A/C `7087010002828`, routing `290913794`.
 - Company **outstanding receivables** list with office address and phones
 - **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. Every receipt is listed once, in the amount-due box, with its date. Under the particulars, the total amount is shown in bold, then paid and total due, beside a Cubity seal that says PAID, PARTIAL, or UNPAID. File name is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`.
@@ -250,12 +252,15 @@ The service list is stored on the phone, not in Postgres. Defaults, which can be
 
 A saved invoice is the record that goes in the database. It stores the service name and amount at that moment, so later edits to the phone list do not rewrite old invoices. Amounts are poisha, shown as **Tk**. The PDF reuses the receivables payment details (bKash and bank).
 
-- `Invoice` — number (typed ID such as `CC420-2509-C01`), client, optional phone, address, project, issue date, paid total, notes
+- `Invoice` — number (typed ID such as `CC420-2609-C01`), client, optional phone, address, project, issue date, optional discount, paid total, notes. Discount is whole Tk. Due is the service total minus discount minus what has been paid. The screen and the PDF show Discount and the total after discount when a discount is set
 - `InvoiceLine` — service name snapshot and amount
 - `InvoicePayment` — one receipt on that invoice: amount, date, optional note. The paid total is the sum of these receipts. A later payment is another row on the same invoice, not a new invoice
 
 ## Changelog
 
+- 2026-09-27 — Discount is a button next to Edit on an invoice and next to Edit, Add due, and Log payment on a client. The screen shows billed, discount, total after discount, and still due. Remove discount clears it. The PDF uses the same totals.
+- 2026-09-27 — Optional discount on invoices and client accounts. It is subtracted from the billed total, and the screen and PDF show the discount and the total after discount. Receivables has an Edit button, like invoices, so the accountant can change the client name, phone, site, and the rest.
+- 2026-09-27 — The invoice ID middle part is editable. New invoices fill it with the year and month (September 2026 → 2609) instead of the day and month, and it follows the issue date until you type your own.
 - 2026-09-26 — Invoice PDFs show the total amount in bold under the particulars, with paid and total due beneath it. Dated receipts stay in the amount-due box.
 - 2026-09-26 — Invoice payments are separate receipts with dates. Recording another payment on the same invoice lists every earlier payment on the screen and in the PDF, then the paid total and what is still due.
 - 2026-09-26 — Added a nightly GitHub Action that saves a read-only copy of the Neon database for 90 days, so data can be recovered even if the Neon project is lost.

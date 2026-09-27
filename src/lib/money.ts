@@ -24,6 +24,13 @@ export function formatMoneyPdf(poisha: number) {
   return `Tk ${formatted}`;
 }
 
+/** Keep a discount inside the gross bill. Both amounts are poisha. */
+export function clampDiscount(grossPoisha: number, discountPoisha: number) {
+  const gross = Math.max(grossPoisha, 0);
+  const discount = Math.min(Math.max(discountPoisha, 0), gross);
+  return { discount, net: gross - discount };
+}
+
 export function poishaToInput(poisha?: number | null) {
   if (poisha == null || poisha <= 0) return "";
   const taka = poisha / 100;

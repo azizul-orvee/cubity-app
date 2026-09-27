@@ -6,11 +6,11 @@ export function todayInputValue() {
   return new Date().toLocaleDateString("en-CA", { timeZone: DHAKA_TZ });
 }
 
-/** Day and month as four digits, e.g. 25 September → 2509. */
-export function invoiceDateCode(isoDate: string) {
-  const [, month, day] = isoDate.split("-");
-  if (!month || !day) return "";
-  return `${day}${month}`;
+/** Year and month as four digits, e.g. September 2026 → 2609. */
+export function invoiceYearMonthCode(isoDate: string) {
+  const [year, month] = isoDate.split("-");
+  if (!year || !month) return "";
+  return `${year.slice(-2)}${month}`;
 }
 
 export function parseDateInput(value: string) {

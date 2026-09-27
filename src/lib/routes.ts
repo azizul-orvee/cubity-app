@@ -27,6 +27,9 @@ export const receivables = {
   clientPay(id: string) {
     return `${RECEIVABLES_CLIENTS}/${id}/pay`;
   },
+  clientDiscount(id: string) {
+    return `${RECEIVABLES_CLIENTS}/${id}/discount`;
+  },
   clientStatement(id: string) {
     return `${RECEIVABLES_CLIENTS}/${id}/statement`;
   },
@@ -47,19 +50,22 @@ export const invoices = {
   edit(id: string) {
     return `${INVOICES}/${id}/edit`;
   },
+  discount(id: string) {
+    return `${INVOICES}/${id}/discount`;
+  },
   pdf(id: string) {
     return `${INVOICES}/${id}/pdf`;
   },
 };
 
 export function isInvoiceFormPath(pathname: string) {
-  return pathname === invoices.new || /^\/invoices\/[^/]+\/edit$/.test(pathname);
+  return pathname === invoices.new || /^\/invoices\/[^/]+\/(edit|discount)$/.test(pathname);
 }
 
 export function isReceivablesFormPath(pathname: string) {
   return (
     pathname === receivables.clientsNew ||
     pathname === receivables.settings ||
-    /^\/receivables\/clients\/[^/]+\/(edit|due|pay)$/.test(pathname)
+    /^\/receivables\/clients\/[^/]+\/(edit|due|pay|discount)$/.test(pathname)
   );
 }

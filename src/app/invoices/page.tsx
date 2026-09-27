@@ -13,7 +13,7 @@ import {
 import { CubityStampLoader } from "@/components/cubity-stamp-loader";
 import { InvoiceList, type InvoiceGroup } from "@/components/invoice-list";
 import { addDaysToInput, DHAKA_TZ, formatDateLong, todayInputValue } from "@/lib/dates";
-import { getInvoices, invoiceTotal } from "@/lib/invoice-queries";
+import { getInvoices, invoiceBill } from "@/lib/invoice-queries";
 import { invoices } from "@/lib/routes";
 
 function dhakaDay(date: Date) {
@@ -34,7 +34,7 @@ async function InvoiceGroups() {
       id: invoice.id,
       number: invoice.number,
       clientName: invoice.clientName,
-      billed: invoiceTotal(invoice.lines),
+      billed: invoiceBill(invoice).net,
     });
     groups.set(day, group);
   }

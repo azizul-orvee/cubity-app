@@ -38,6 +38,19 @@ function formString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function readOptionalDiscount(raw: string, billed: number) {
+  const trimmed = raw.trim();
+  if (!trimmed) return { discountAmount: 0 };
+  if (!/^\d+$/.test(trimmed)) {
+    return { error: "Discount must be a whole number. No letters or fractions." };
+  }
+  const taka = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(taka)) return { error: "Enter a valid discount." };
+  const discountAmount = taka * 100;
+  if (discountAmount > billed) return { error: "Discount cannot be more than the billed total." };
+  return { discountAmount };
+}
+
 function resolvePromisedAmount(formData: FormData, remaining: number) {
   if (remaining <= 0) return null;
   const raw = formString(formData, "promisedAmount").trim();
@@ -56,6 +69,7 @@ function revalidateClient(id?: string) {
     revalidatePath(receivables.clientDue(id));
     revalidatePath(receivables.clientPay(id));
     revalidatePath(receivables.clientEdit(id));
+    revalidatePath(receivables.clientDiscount(id));
   }
 }
 
@@ -100,9 +114,43 @@ export async function updateClient(clientId: string, formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the client details." };
   }
 
+  const existing = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { entries: true },
+  });
+  if (!existing) return { error: "Client not found." };
+
+  const discount = readOptionalDiscount(formString(formData, "discount"), totals(existing.entries).totalDue);
+  if ("error" in discount) return discount;
+
   await prisma.client.update({
     where: { id: clientId },
-    data: parsed.data,
+    data: { ...parsed.data, discountAmount: discount.discountAmount },
+  });
+  revalidateClient(clientId);
+  redirect(receivables.client(clientId));
+}
+
+export async function setClientDiscount(clientId: string, formData: FormData) {
+  const denied = await requireAccountant();
+  if (denied) return denied;
+
+  const existing = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { entries: true },
+  });
+  if (!existing) return { error: "Client not found." };
+
+  const billed = totals(existing.entries).totalDue;
+  const discount =
+    formString(formData, "remove") === "1"
+      ? { discountAmount: 0 }
+      : readOptionalDiscount(formString(formData, "discount"), billed);
+  if ("error" in discount) return discount;
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { discountAmount: discount.discountAmount },
   });
   revalidateClient(clientId);
   redirect(receivables.client(clientId));
@@ -149,7 +197,7 @@ export async function recordSiteVisit(clientId: string, formData: FormData) {
     return { error: "Client not found." };
   }
 
-  const remainingAfter = totals(existing.entries).outstanding + billed - received;
+  const remainingAfter = totals(existing.entries, existing.discountAmount).outstanding + billed - received;
   if (remainingAfter > 0 && !promisedDate) {
     return { error: "Set the date they promised to pay the remaining amount." };
   }
@@ -222,8 +270,8 @@ export async function recordPayment(clientId: string, formData: FormData) {
     return { error: "Client not found." };
   }
 
-  const current = totals(client.entries);
-  const remainingAfter = current.totalDue - current.totalPaid - amount;
+  const current = totals(client.entries, client.discountAmount);
+  const remainingAfter = current.outstanding - amount;
 
   if (remainingAfter > 0 && !promisedDate) {
     return { error: "They still have a due. Set the next promised payment date." };
@@ -267,7 +315,7 @@ export async function updatePromisedDate(clientId: string, formData: FormData) {
   });
   if (!client) return;
 
-  const outstanding = Math.max(totals(client.entries).outstanding, 0);
+  const outstanding = Math.max(totals(client.entries, client.discountAmount).outstanding, 0);
   const promisedAmount =
     promisedDate && outstanding > 0 ? resolvePromisedAmount(formData, outstanding) : null;
 
@@ -346,9 +394,7 @@ export async function deleteEntry(entryId: string, clientId: string) {
   });
 
   if (client) {
-    const { outstanding } = {
-      outstanding: totals(client.entries).outstanding,
-    };
+    const outstanding = totals(client.entries, client.discountAmount).outstanding;
     if (outstanding <= 0) {
       await prisma.client.update({
         where: { id: clientId },

@@ -22,7 +22,7 @@ import { COMPANY, companyAddressLine, companyPhoneLine, paymentMethodLabel, type
 import { formatDate } from "@/lib/dates";
 import { clientStatus, runningLedger, type ClientWithEntries } from "@/lib/ledger";
 import { invoicePayStatus } from "@/lib/invoice-queries";
-import { formatMoneyPdf } from "@/lib/money";
+import { clampDiscount, formatMoneyPdf } from "@/lib/money";
 
 export type InvoicePdfData = {
   number: string;
@@ -33,6 +33,7 @@ export type InvoicePdfData = {
   issueDate: Date;
   notes: string | null;
   paidAmount: number;
+  discountAmount: number;
   lines: { serviceName: string; amount: number }[];
   payments: { date: Date; amount: number }[];
 };
@@ -517,7 +518,8 @@ export async function buildClientStatementPdf(
   const boxWidth = 232;
   const showPromise = Boolean(status.promised && status.outstanding > 0);
   const showInstallment = Boolean(showPromise && status.promisedPartial);
-  const boxHeight = 96 + (showInstallment ? 14 : 0);
+  const showDiscount = status.discount > 0;
+  const boxHeight = 96 + (showInstallment ? 14 : 0) + (showDiscount ? 28 : 0);
   const box = {
     x: width - MARGIN - boxWidth,
     width: boxWidth,
@@ -555,6 +557,14 @@ export async function buildClientStatementPdf(
   boxY -= 13;
   drawText(page, "Billed", innerLeft, boxY, regular, 9, MUTED);
   drawRight(page, formatMoneyPdf(status.totalDue), innerRight, boxY, regular, 9, INK);
+  if (showDiscount) {
+    boxY -= 14;
+    drawText(page, "Discount", innerLeft, boxY, regular, 9, MUTED);
+    drawRight(page, formatMoneyPdf(status.discount), innerRight, boxY, regular, 9, INK);
+    boxY -= 14;
+    drawText(page, "After discount", innerLeft, boxY, regular, 9, MUTED);
+    drawRight(page, formatMoneyPdf(status.netDue), innerRight, boxY, bold, 9, INK);
+  }
   boxY -= 14;
   drawText(page, "Paid", innerLeft, boxY, regular, 9, MUTED);
   drawRight(page, formatMoneyPdf(status.totalPaid), innerRight, boxY, regular, 9, INK);
@@ -702,6 +712,23 @@ export async function buildClientStatementPdf(
     color: HAIR,
   });
   y -= 18;
+  if (showDiscount) {
+    if (y < 120) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
+      ({ width, height } = page.getSize());
+      page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
+      y = height - 48;
+    }
+    drawRight(page, "Billed", cols.pending - 8, y, regular, 10, MUTED);
+    drawText(page, formatMoneyPdf(status.totalDue), cols.pending, y, regular, 10, INK);
+    y -= 16;
+    drawRight(page, "Discount", cols.pending - 8, y, regular, 10, MUTED);
+    drawText(page, formatMoneyPdf(status.discount), cols.pending, y, regular, 10, INK);
+    y -= 16;
+    drawRight(page, "Total after discount", cols.pending - 8, y, regular, 10, MUTED);
+    drawText(page, formatMoneyPdf(status.netDue), cols.pending, y, bold, 11, INK);
+    y -= 18;
+  }
   drawRight(page, "Amount still pending", cols.pending - 8, y, regular, 10, MUTED);
   drawText(page, formatMoneyPdf(status.outstanding), cols.pending, y, bold, 13, RED);
 
@@ -878,7 +905,9 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   const bkashLogo = await loadPng(pdf, "bkash-mark.png");
   const nrbLogo = await loadPng(pdf, "nrb-mark.png");
   const total = invoice.lines.reduce((sum, line) => sum + line.amount, 0);
-  const due = total - invoice.paidAmount;
+  const { discount, net } = clampDiscount(total, invoice.discountAmount ?? 0);
+  const due = net - invoice.paidAmount;
+  const showDiscount = discount > 0;
   const payments = [...invoice.payments].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   let page = pdf.addPage([PAGE.width, PAGE.height]);
@@ -908,7 +937,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   }
 
   const boxWidth = 232;
-  const boxHeight = 108 + payments.length * 14;
+  const boxHeight = 108 + payments.length * 14 + (showDiscount ? 28 : 0);
   const box = {
     x: width - MARGIN - boxWidth,
     width: boxWidth,
@@ -934,6 +963,14 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   boxY -= 14;
   drawText(page, "Total amount", innerLeft, boxY, regular, 9, MUTED);
   drawRight(page, formatMoneyPdf(total), innerRight, boxY, bold, 9, INK);
+  if (showDiscount) {
+    boxY -= 14;
+    drawText(page, "Discount", innerLeft, boxY, regular, 9, MUTED);
+    drawRight(page, formatMoneyPdf(discount), innerRight, boxY, regular, 9, INK);
+    boxY -= 14;
+    drawText(page, "After discount", innerLeft, boxY, regular, 9, MUTED);
+    drawRight(page, formatMoneyPdf(net), innerRight, boxY, bold, 9, INK);
+  }
   for (const payment of payments) {
     boxY -= 14;
     drawText(page, format(payment.date, "dd MMM yyyy"), innerLeft, boxY, regular, 9, MUTED);
@@ -1013,16 +1050,25 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     thickness: 0.6,
     color: HAIR,
   });
+  const sealTop = y + 4;
   y -= 20;
   drawRight(page, "Total amount", amountRight - 110, y, bold, 11, INK);
   drawRight(page, formatMoneyPdf(total), amountRight, y, bold, 13, INK);
+  if (showDiscount) {
+    y -= 16;
+    drawRight(page, "Discount", amountRight - 110, y, regular, 10, MUTED);
+    drawRight(page, formatMoneyPdf(discount), amountRight, y, regular, 10, INK);
+    y -= 18;
+    drawRight(page, "Total after discount", amountRight - 110, y, bold, 11, INK);
+    drawRight(page, formatMoneyPdf(net), amountRight, y, bold, 13, INK);
+  }
   y -= 16;
   drawRight(page, "Paid", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(invoice.paidAmount), amountRight, y, regular, 10, INK);
   y -= 18;
   drawRight(page, "Total due", amountRight - 110, y, regular, 10, MUTED);
   drawRight(page, formatMoneyPdf(due), amountRight, y, bold, 13, RED);
-  drawPaymentSeal(page, MARGIN, y + 48, bold, invoice.paidAmount, total);
+  drawPaymentSeal(page, MARGIN, sealTop, bold, invoice.paidAmount, net);
   y -= 32;
   if (invoice.notes) {
     if (y < 200) {

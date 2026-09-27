@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { saveInvoice } from "@/lib/invoice-actions";
 import { loadInvoiceServices, type CatalogService } from "@/lib/invoice-catalog";
-import { invoiceDateCode, todayInputValue, toInputValue } from "@/lib/dates";
+import { invoiceYearMonthCode, todayInputValue, toInputValue } from "@/lib/dates";
 import { formatMoney, poishaToInput } from "@/lib/money";
 import { invoices } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ function cleanIdPart(value: string) {
 }
 
 function splitInvoiceId(number: string) {
-  const match = number.toUpperCase().match(/^([A-Z0-9]+)-(\d{4})-([A-Z0-9]+)$/);
+  const match = number.toUpperCase().match(/^([A-Z0-9]+)-([A-Z0-9]+)-([A-Z0-9]+)$/);
   if (!match) return null;
   return { prefix: match[1], code: match[2], suffix: match[3] };
 }
@@ -74,18 +74,27 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [justSelected, setJustSelected] = useState<string | null>(null);
   const [paid, setPaid] = useState("");
+  const [discount, setDiscount] = useState(poishaToInput(source?.discountAmount));
   const [paidDateTouched, setPaidDateTouched] = useState(false);
   const [paidDate, setPaidDate] = useState("");
   const savedParts = invoice ? splitInvoiceId(invoice.number) : null;
   const legacyId = Boolean(invoice && !savedParts);
   const [invoiceId, setInvoiceId] = useState(invoice?.number ?? "");
+  const initialIssueDate = invoice ? toInputValue(invoice.issueDate) : todayInputValue();
   const [prefix, setPrefix] = useState(savedParts?.prefix ?? "CC420");
   const [suffix, setSuffix] = useState(savedParts?.suffix ?? "C01");
-  const [issueDate, setIssueDate] = useState(invoice ? toInputValue(invoice.issueDate) : todayInputValue());
-  const [dateTouched, setDateTouched] = useState(false);
+  const [code, setCode] = useState(savedParts?.code ?? invoiceYearMonthCode(initialIssueDate));
+  const [issueDate, setIssueDate] = useState(initialIssueDate);
   const todayRef = useRef(todayInputValue());
-  const dateCode = !invoice || dateTouched ? invoiceDateCode(issueDate) : (savedParts?.code ?? invoiceDateCode(issueDate));
-  const composedId = `${prefix}-${dateCode}-${suffix}`;
+  const issueDateRef = useRef(initialIssueDate);
+  const codeTouchedRef = useRef(false);
+  const composedId = `${prefix}-${code}-${suffix}`;
+
+  function applyIssueDate(next: string) {
+    issueDateRef.current = next;
+    setIssueDate(next);
+    if (!codeTouchedRef.current) setCode(invoiceYearMonthCode(next));
+  }
 
   useEffect(() => {
     if (invoice) return;
@@ -93,8 +102,10 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
       const next = todayInputValue();
       const previous = todayRef.current;
       todayRef.current = next;
-      if (next === previous) return;
-      setIssueDate((current) => (current === previous ? next : current));
+      if (next === previous || issueDateRef.current !== previous) return;
+      issueDateRef.current = next;
+      setIssueDate(next);
+      if (!codeTouchedRef.current) setCode(invoiceYearMonthCode(next));
     }, 30_000);
     return () => window.clearInterval(timer);
   }, [invoice]);
@@ -128,18 +139,22 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
     const taka = Number.parseInt(amounts[id] ?? "", 10);
     return sum + (Number.isFinite(taka) ? taka * 100 : 0);
   }, 0);
+  const discountTaka = Number.parseInt(discount, 10);
+  const discountPoisha = Number.isFinite(discountTaka) ? discountTaka * 100 : 0;
+  const discountTooHigh = discountPoisha > total;
+  const net = Math.max(total - discountPoisha, 0);
   const paidTaka = Number.parseInt(paid, 10);
   const enteredPaid = Number.isFinite(paidTaka) ? paidTaka * 100 : 0;
   const paidAmount = invoice ? invoice.paidAmount : enteredPaid;
-  const due = total - paidAmount;
-  const overpaid = invoice ? total > 0 && invoice.paidAmount > total : total > 0 && enteredPaid > total;
+  const due = net - paidAmount;
+  const overpaid = !discountTooHigh && (invoice ? paidAmount > net : enteredPaid > net);
   const paymentDate = paidDateTouched ? paidDate : issueDate;
-  const totalTaka = Math.floor(total / 100);
+  const netTaka = Math.floor(net / 100);
 
   const paidPresets: { label: string; value: string | null }[] = [
     { label: "Nothing yet", value: "" },
-    { label: "Half", value: totalTaka > 0 ? String(Math.floor(totalTaka / 2)) : null },
-    { label: "Full amount", value: totalTaka > 0 ? String(totalTaka) : null },
+    { label: "Half", value: netTaka > 0 ? String(Math.floor(netTaka / 2)) : null },
+    { label: "Full amount", value: netTaka > 0 ? String(netTaka) : null },
   ];
 
   function toggle(id: string) {
@@ -191,11 +206,22 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
                   onFocus={revealField}
                 />
                 <Input
-                  readOnly
-                  tabIndex={-1}
-                  aria-label="Date and month"
-                  value={dateCode}
-                  className={cn(fieldClass, "w-[5.5rem] text-center font-semibold tracking-wide text-muted-foreground")}
+                  required
+                  aria-label="Invoice ID middle"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  maxLength={16}
+                  placeholder={invoiceYearMonthCode(issueDate)}
+                  value={code}
+                  onChange={(event) => {
+                    codeTouchedRef.current = true;
+                    setCode(cleanIdPart(event.target.value));
+                  }}
+                  className={cn(fieldClass, "w-[5.75rem] text-center font-semibold tracking-wide")}
+                  onFocus={revealField}
                 />
                 <Input
                   required
@@ -218,7 +244,7 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
           <p className="text-sm text-muted-foreground">
             {legacyId
               ? "Capital letters, numbers, and hyphens only."
-              : `${composedId}. The middle is the date and month. Change the start and end if you need to.`}
+              : `${composedId}. Change any part if you need to.`}
           </p>
         </div>
         <div className="grid gap-2.5">
@@ -231,13 +257,40 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
             type="date"
             required
             value={issueDate}
-            onChange={(event) => {
-              setDateTouched(true);
-              setIssueDate(event.target.value);
-            }}
+            onChange={(event) => applyIssueDate(event.target.value)}
             className={fieldClass}
             onFocus={revealField}
           />
+        </div>
+      </Section>
+
+      <Section title="Discount" hint="Optional. Taken off the service total before paid and due.">
+        <div className="grid gap-2.5">
+          <Label htmlFor="discount" className="text-base">
+            Discount (Tk) <Optional />
+          </Label>
+          <Input
+            id="discount"
+            name="discount"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            placeholder="0"
+            value={discount}
+            onChange={(event) => setDiscount(digitsOnly(event.target.value))}
+            aria-invalid={discountTooHigh || undefined}
+            className={fieldClass}
+            onFocus={revealField}
+          />
+          {discountTooHigh ? (
+            <p className="text-sm text-destructive">Discount cannot be more than the invoice total.</p>
+          ) : discountPoisha > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {formatMoney(total)} billed, {formatMoney(net)} after discount. Still due {formatMoney(Math.max(due, 0))}.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Leave blank if there is no discount. Clear it later to remove one.</p>
+          )}
         </div>
       </Section>
 
@@ -387,7 +440,7 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
           </p>
           {overpaid ? (
             <p className="text-sm text-destructive">
-              Payments already recorded are higher than this total. Remove a payment on the invoice first.
+              Payments already recorded are higher than the total after discount. Remove a payment on the invoice first.
             </p>
           ) : (
             <Link href={invoices.invoice(invoice.id)} className="text-sm font-medium text-primary">
@@ -437,7 +490,7 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
               })}
             </div>
             <p className={cn("text-sm", overpaid ? "text-destructive" : "text-muted-foreground")}>
-              {overpaid ? "Paid amount is higher than the invoice total." : "Leave blank if nothing has been paid yet."}
+              {overpaid ? "Paid amount is higher than the total after discount." : "Leave blank if nothing has been paid yet."}
             </p>
           </div>
           <div className="grid gap-2.5">
@@ -488,10 +541,14 @@ export function InvoiceForm({ invoice, template }: { invoice?: InvoiceWithLines;
             <p className="text-2xl leading-tight font-semibold tabular-nums tracking-tight text-[#0F766E]">
               {formatMoney(Math.max(due, 0))}
             </p>
-            <p className={cn("truncate text-xs", overpaid ? "text-destructive" : "text-muted-foreground")}>
-              {overpaid && invoice
-                ? "Total is below the payments already recorded."
-                : `${formatMoney(total)} billed`}
+            <p className={cn("truncate text-xs", overpaid || discountTooHigh ? "text-destructive" : "text-muted-foreground")}>
+              {discountTooHigh
+                ? "Discount is higher than the invoice total."
+                : overpaid && invoice
+                  ? "Total after discount is below the payments already recorded."
+                  : discountPoisha > 0
+                    ? `${formatMoney(net)} after discount`
+                    : `${formatMoney(total)} billed`}
             </p>
           </div>
           <SubmitButton className="h-14 shrink-0 rounded-2xl px-6 text-base md:h-14">

@@ -1,6 +1,7 @@
 import type { Client, LedgerEntry } from "@prisma/client";
 import { addDays, format, isBefore, startOfDay, subMonths } from "date-fns";
 import { daysFromToday, isDateBeforeToday, startOfToday } from "@/lib/dates";
+import { clampDiscount } from "@/lib/money";
 
 export type LedgerType = "DUE" | "PAYMENT";
 
@@ -56,17 +57,20 @@ export function runningLedger(entries: LedgerEntry[]): RunningLine[] {
   });
 }
 
-export function totals(entries: LedgerEntry[]) {
+export function totals(entries: LedgerEntry[], discountAmount = 0) {
   const totalDue = entries
     .filter((entry) => entry.type === "DUE")
     .reduce((sum, entry) => sum + entry.amount, 0);
   const totalPaid = entries
     .filter((entry) => entry.type === "PAYMENT")
     .reduce((sum, entry) => sum + entry.amount, 0);
+  const { discount, net } = clampDiscount(totalDue, discountAmount);
   return {
     totalDue,
+    discount,
+    netDue: net,
     totalPaid,
-    outstanding: totalDue - totalPaid,
+    outstanding: net - totalPaid,
   };
 }
 
@@ -78,7 +82,7 @@ export function agingBucket(ageDays: number): AgingKey {
   return "d90";
 }
 
-export function openDues(entries: LedgerEntry[]): OpenDue[] {
+export function openDues(entries: LedgerEntry[], discountAmount = 0): OpenDue[] {
   const chronological = sortEntries(entries);
   const dues = chronological.filter((entry) => entry.type === "DUE");
   let remainingPayments = chronological
@@ -86,12 +90,17 @@ export function openDues(entries: LedgerEntry[]): OpenDue[] {
     .reduce((sum, entry) => sum + entry.amount, 0);
 
   const today = startOfToday();
+  const billed = dues.reduce((sum, entry) => sum + entry.amount, 0);
+  let discountLeft = clampDiscount(billed, discountAmount).discount;
 
   return dues
     .map((entry) => {
       const applied = Math.min(entry.amount, remainingPayments);
       remainingPayments -= applied;
-      const remaining = entry.amount - applied;
+      let remaining = entry.amount - applied;
+      const discountCut = Math.min(remaining, discountLeft);
+      discountLeft -= discountCut;
+      remaining -= discountCut;
       const ageDays = Math.max(
         0,
         Math.round((today.getTime() - startOfDay(entry.date).getTime()) / (1000 * 60 * 60 * 24)),
@@ -116,9 +125,9 @@ export function emptyAging() {
   } satisfies Record<AgingKey, number>;
 }
 
-export function agingFromEntries(entries: LedgerEntry[]) {
+export function agingFromEntries(entries: LedgerEntry[], discountAmount = 0) {
   const buckets = emptyAging();
-  for (const due of openDues(entries)) {
+  for (const due of openDues(entries, discountAmount)) {
     buckets[due.bucket] += due.remaining;
   }
   return buckets;
@@ -132,7 +141,7 @@ export function promisedToward(client: Pick<Client, "nextPromisedAmount">, outst
 }
 
 export function clientStatus(client: ClientWithEntries) {
-  const { totalDue, totalPaid, outstanding } = totals(client.entries);
+  const { totalDue, totalPaid, outstanding, discount, netDue } = totals(client.entries, client.discountAmount ?? 0);
   const lastPayment = sortEntries(client.entries)
     .filter((entry) => entry.type === "PAYMENT")
     .at(-1);
@@ -151,6 +160,8 @@ export function clientStatus(client: ClientWithEntries) {
 
   return {
     totalDue,
+    discount,
+    netDue,
     totalPaid,
     outstanding: open,
     credit,
@@ -162,8 +173,8 @@ export function clientStatus(client: ClientWithEntries) {
     overdue,
     dueToday,
     daysOverdue: overdue ? Math.abs(daysFromToday(promised)) : 0,
-    aging: agingFromEntries(client.entries),
-    oldestOpenDue: openDues(client.entries)[0] ?? null,
+    aging: agingFromEntries(client.entries, client.discountAmount ?? 0),
+    oldestOpenDue: openDues(client.entries, client.discountAmount ?? 0)[0] ?? null,
   };
 }
 

@@ -17,6 +17,7 @@ model Client {
   organization     String?
   siteName         String?
   notes            String?
+  discountAmount   Int           @default(0)
   nextPromisedDate DateTime?
   nextPromisedAmount Int?
   createdAt        DateTime      @default(now())
@@ -49,8 +50,9 @@ model Invoice {
   clientAddress String?
   projectName   String?
   issueDate     DateTime
-  paidAmount    Int              @default(0)
-  notes         String?
+  paidAmount     Int              @default(0)
+  discountAmount Int              @default(0)
+  notes          String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   lines         InvoiceLine[]

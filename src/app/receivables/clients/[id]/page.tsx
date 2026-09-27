@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileDown, MessageCircle, Pencil, Phone, Plus, Wallet } from "lucide-react";
+import { BadgePercent, FileDown, MessageCircle, Pencil, Phone, Plus, Wallet } from "lucide-react";
 import { DeleteClientButton, DeleteEntryButton } from "@/components/delete-buttons";
 import { PdfDownload } from "@/components/pdf-download";
 import { DueStatusBadge } from "@/components/due-status-badge";
@@ -21,7 +21,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   const status = clientStatus(client);
   const ledger = runningLedger(client.entries);
-  const paidPercent = status.totalDue > 0 ? Math.min(status.totalPaid / status.totalDue, 1) : 0;
+  const billBase = status.discount > 0 ? status.netDue : status.totalDue;
+  const paidPercent = billBase > 0 ? Math.min(status.totalPaid / billBase, 1) : 0;
 
   return (
     <div className="grid gap-8">
@@ -29,31 +30,20 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         <Link href={receivables.clients} className="text-sm font-medium text-primary">
           Clients
         </Link>
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
-              Client account
-            </p>
-            <h1 className="mt-2 text-[2rem] leading-[1.1] font-semibold tracking-tight">
-              {client.name}
-            </h1>
-            <p className="mt-2 text-base text-muted-foreground">
-              {client.phone}
-              {client.siteName ? ` · ${client.siteName}` : ""}
-            </p>
-            <div className="mt-3">
-              <DueStatusBadge status={status} />
-            </div>
+        <div className="mt-4">
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+            Client account
+          </p>
+          <h1 className="mt-2 text-[2rem] leading-[1.1] font-semibold tracking-tight">
+            {client.name}
+          </h1>
+          <p className="mt-2 text-base text-muted-foreground">
+            {client.phone}
+            {client.siteName ? ` · ${client.siteName}` : ""}
+          </p>
+          <div className="mt-3">
+            <DueStatusBadge status={status} />
           </div>
-          {canEdit ? (
-            <Link
-              href={receivables.clientEdit(client.id)}
-              className="grid size-12 shrink-0 place-items-center rounded-full bg-white ring-1 ring-border"
-            >
-              <Pencil className="size-4" />
-              <span className="sr-only">Edit</span>
-            </Link>
-          ) : null}
         </div>
       </div>
 
@@ -68,7 +58,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <div className="h-full rounded-full bg-white" style={{ width: `${paidPercent * 100}%` }} />
         </div>
         <p className="mt-3 text-sm leading-relaxed text-white/85">
-          Paid {formatMoney(status.totalPaid)} of {formatMoney(status.totalDue)} billed
+          {status.discount > 0
+            ? `Billed ${formatMoney(status.totalDue)}, discount ${formatMoney(status.discount)}. Paid ${formatMoney(status.totalPaid)} of ${formatMoney(status.netDue)} after discount.`
+            : `Paid ${formatMoney(status.totalPaid)} of ${formatMoney(status.totalDue)} billed`}
         </p>
       </section>
 
@@ -80,13 +72,21 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           label="WhatsApp"
           external
         />
-        {canEdit ? (
-          <>
-            <Action href={receivables.clientDue(client.id)} icon={<Plus className="size-5" />} label="Add due" primary />
-            <Action href={receivables.clientPay(client.id)} icon={<Wallet className="size-5" />} label="Log payment" />
-          </>
-        ) : null}
       </div>
+
+      {canEdit ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Action href={receivables.clientEdit(client.id)} icon={<Pencil className="size-5" />} label="Edit" />
+          <Action
+            href={receivables.clientDiscount(client.id)}
+            icon={<BadgePercent className="size-5" />}
+            label="Discount"
+            hint={status.discount > 0 ? formatMoney(status.discount) : "None yet"}
+          />
+          <Action href={receivables.clientDue(client.id)} icon={<Plus className="size-5" />} label="Add due" primary />
+          <Action href={receivables.clientPay(client.id)} icon={<Wallet className="size-5" />} label="Log payment" />
+        </div>
+      ) : null}
 
       <PdfDownload
         href={receivables.clientStatement(client.id)}
@@ -175,6 +175,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             ))}
           </div>
         )}
+        {status.discount > 0 ? (
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            Discount {formatMoney(status.discount)} comes off the billed total. Still due {formatMoney(status.outstanding)}.
+          </p>
+        ) : null}
       </section>
 
       {client.address || client.email || client.notes || client.organization ? (
@@ -230,32 +235,40 @@ function Action({
   href,
   icon,
   label,
+  hint,
   primary,
   external,
 }: {
   href: string;
   icon: ReactNode;
   label: string;
+  hint?: string;
   primary?: boolean;
   external?: boolean;
 }) {
   const className = primary
-    ? "flex min-h-[5rem] flex-col items-center justify-center gap-2 rounded-[1.35rem] bg-primary text-sm font-semibold text-primary-foreground"
-    : "flex min-h-[5rem] flex-col items-center justify-center gap-2 rounded-[1.35rem] bg-white text-sm font-semibold ring-1 ring-border";
+    ? "flex min-h-[5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-primary px-2 text-sm font-semibold text-primary-foreground"
+    : "flex min-h-[5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-white px-2 text-sm font-semibold ring-1 ring-border";
+
+  const body = (
+    <>
+      {icon}
+      {label}
+      {hint ? <span className="text-xs font-medium text-[#0F766E]">{hint}</span> : null}
+    </>
+  );
 
   if (href.startsWith("/") && !external) {
     return (
       <Link href={href} className={className}>
-        {icon}
-        {label}
+        {body}
       </Link>
     );
   }
 
   return (
     <a href={href} className={className} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
-      {icon}
-      {label}
+      {body}
     </a>
   );
 }
