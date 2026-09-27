@@ -23,7 +23,7 @@ export default async function InvoiceLedgerPage({ params }: { params: Promise<{ 
   const bill = invoiceBill(invoice);
 
   return (
-    <div className="mx-auto grid max-w-lg gap-7">
+    <div className="cb-stagger mx-auto grid max-w-lg gap-7">
       <div>
         <Link href={invoices.invoice(invoice.id)} className="text-sm font-medium text-primary">
           Back to invoice

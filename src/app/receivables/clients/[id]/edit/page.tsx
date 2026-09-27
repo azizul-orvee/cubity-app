@@ -13,7 +13,7 @@ export default async function EditClientPage({ params }: { params: Promise<{ id:
   if (!client) notFound();
 
   return (
-    <div className="mx-auto grid max-w-lg gap-7">
+    <div className="cb-stagger mx-auto grid max-w-lg gap-7">
       <div>
         <Link href={receivables.client(client.id)} className="text-sm font-medium text-primary">
           Back to client

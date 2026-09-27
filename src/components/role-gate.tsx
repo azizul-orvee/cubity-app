@@ -59,20 +59,20 @@ export function RoleGate({
             <DialogHeader>
               <DialogTitle>Who&apos;s opening Receivables?</DialogTitle>
               <DialogDescription>
-                Accountants can add and edit. Engineers can only view.
+                The CEO can add and edit. Engineers can only view.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-3">
+            <div className="cb-stagger grid gap-3">
               <button
                 type="button"
                 onClick={() => setStep("accountant")}
-                className="flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-border"
+                className="cb-tap flex min-h-20 items-center gap-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-border"
               >
                 <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
                   <Calculator className="size-5" strokeWidth={1.75} />
                 </span>
                 <span>
-                  <span className="block text-base font-semibold">Accountant</span>
+                  <span className="block text-base font-semibold">CEO</span>
                   <span className="mt-0.5 block text-sm text-muted-foreground">
                     Add clients, dues, and payments
                   </span>
@@ -81,7 +81,7 @@ export function RoleGate({
               <form action={enterAsEngineer}>
                 <button
                   type="submit"
-                  className="flex min-h-20 w-full items-center gap-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-border"
+                  className="cb-tap flex min-h-20 w-full items-center gap-4 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-border"
                 >
                   <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[#0F766E] text-white">
                     <HardHat className="size-5" strokeWidth={1.75} />
@@ -99,8 +99,8 @@ export function RoleGate({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Accountant password</DialogTitle>
-              <DialogDescription>Only the office accountant can change the books.</DialogDescription>
+              <DialogTitle>CEO password</DialogTitle>
+              <DialogDescription>Only the CEO can change the books.</DialogDescription>
             </DialogHeader>
             <form action={action} className="grid gap-4">
               {state?.error ? (

@@ -33,7 +33,7 @@ export function InvoiceList({ groups }: { groups: InvoiceGroup[] }) {
   let avatarIndex = 0;
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="cb-stagger grid grid-cols-1 gap-8">
       <div className="relative min-w-0">
         <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -52,13 +52,13 @@ export function InvoiceList({ groups }: { groups: InvoiceGroup[] }) {
         </p>
       ) : (
         visible.map((group) => (
-          <section key={group.day} className="grid grid-cols-1 gap-3">
+          <section key={group.day} className="cb-stagger grid grid-cols-1 gap-3">
             <h2 className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{group.label}</h2>
             {group.items.map((row) => (
               <Link
                 key={row.id}
                 href={invoices.invoice(row.id)}
-                className="flex items-center gap-4 rounded-[1.5rem] bg-white px-5 py-4 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
+                className="cb-tap flex items-center gap-4 rounded-[1.5rem] bg-white px-5 py-4 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
               >
                 <InvoiceAvatar name={row.clientName} index={avatarIndex++} />
                 <div className="min-w-0 flex-1">

@@ -22,7 +22,7 @@ Open [http://localhost:3000](http://localhost:3000) (or the port Next.js prints 
 
 Name and phone are required to create a client. Email and address are optional. Company, site/project, and notes are only on the edit screen.
 
-Opening **Receivables** asks whether you are the **accountant** or an **engineer**. The accountant password is checked in code (not the database). Engineers get a view-only app: they can read clients, ledgers, and PDFs, and they can call or WhatsApp, but they cannot add, edit, or delete.
+Opening **Receivables** asks whether you are the **CEO** or an **engineer**. The CEO password is checked in code (not the database). Engineers get a view-only app: they can read clients, ledgers, and PDFs, and they can call or WhatsApp, but they cannot add, edit, or delete.
 
 ## Core story
 
@@ -39,21 +39,21 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/` Workspace | Cubity header and office footer. Two product cards: Receivables (opens a role popup) and Invoice maker |
 | `/receivables` | Cash summary: hero total, rings, donut mix, 6-month billed vs collected line, aging capsule, largest balances, overdue/upcoming queues, office stamp. Blocked until a role is chosen. Engineers see view-only (no add client). |
 | `/receivables/clients` | Search and filter clients (all / with dues / overdue / settled). Opening this from Receivables Home shows the Cubity seal appearing (paint-in, bloom, or rise — picked at random) while the list loads from the database. |
-| `/receivables/clients/new` | Add a client: name and phone required, email and address optional (accountant only) |
-| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF. Accountant gets Edit, Discount, Add due, and Log payment in one grid. Discount shows "None yet" or the amount. A ledger line is **voided**, never deleted: it stays in the list struck through with the date and reason, and stops counting. **Account history** below the ledger lists discount changes and voided lines |
-| `/receivables/clients/[id]/edit` | Edit the client: name and phone required; email, address, company, site, and notes optional (accountant only) |
-| `/receivables/clients/[id]/discount` | Set or remove the account discount (accountant only). Whole Tk, cannot exceed the billed total. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the client page, the dashboard, and the due-statement PDF. Remove discount clears it |
-| `/receivables/clients/[id]/due` | Add a due / site visit (accountant only) |
-| `/receivables/clients/[id]/pay` | Log a payment (accountant only) |
+| `/receivables/clients/new` | Add a client: name and phone required, email and address optional (CEO only) |
+| `/receivables/clients/[id]` | Ledger, outstanding, next promise (date and amount), call/WhatsApp, PDF. The CEO gets Edit, Discount, Add due, and Log payment in one grid. Discount shows "None yet" or the amount. A ledger line is **voided**, never deleted: it stays in the list struck through with the date and reason, and stops counting. **Account history** below the ledger lists discount changes and voided lines |
+| `/receivables/clients/[id]/edit` | Edit the client: name and phone required; email, address, company, site, and notes optional (CEO only) |
+| `/receivables/clients/[id]/discount` | Set or remove the account discount (CEO only). Whole Tk, cannot exceed the billed total. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the client page, the dashboard, and the due-statement PDF. Remove discount clears it |
+| `/receivables/clients/[id]/due` | Add a due / site visit (CEO only) |
+| `/receivables/clients/[id]/pay` | Log a payment (CEO only) |
 | `/receivables/clients/[id]/statement` | Download that client's due statement PDF (file named like `Azizul-Hakim-due-statement.pdf`), including bKash and bank payment details |
-| `/receivables/settings` | Edit the bKash number and bank account printed on due statements (accountant only) |
+| `/receivables/settings` | Edit the bKash number and bank account printed on due statements (CEO only) |
 | `/receivables/reports/outstanding` | Download a company-wide outstanding PDF |
-| `/invoices` | Every invoice, newest first, grouped by the day it was created (Today, Yesterday, then the date). Search by client or invoice number. Bottom nav: Invoices, Services, and New. No accountant gate. |
+| `/invoices` | Every invoice, newest first, grouped by the day it was created (Today, Yesterday, then the date). Search by client or invoice number. Bottom nav: Invoices, Services, and New. No CEO gate. |
 | `/invoices/new` | New invoice in cards: Invoice (required invoice ID in three parts — start, middle, end — all editable; the middle starts as the year and month, so September 2026 is 2609, plus the issue date), Discount (optional whole Tk, directly under the invoice card, taken off the service total; clear it to remove), Bill to (client, optional phone, project, address), Services (tap to pick, amount box opens), Payment (optional first receipt: amount and date, with Nothing yet / Half / Full amount chips), Notes. A sticky bar shows what is still due and the Create button. `?from=<id>` pre-fills a new bill from another invoice (a fresh ID, payments are not copied, date is today) |
 | `/invoices/[id]` | The invoice shown like the PDF, plus a **Client ledger** card (which receivables client this bill belongs to, and whether it is on their ledger) and a Payments card to record another receipt (amount, date, optional note) or remove one. The document lists every receipt with its date, then billed, discount when set, total after discount, paid, and still due, and a Cubity stamp: green Paid, purple Partial payment, or red Unpaid. Buttons: Edit, Discount, New from this, Download. Discount shows "None yet" or the amount. Delete sits below and asks for confirmation first |
 | `/invoices/[id]/discount` | Set or remove this invoice's discount. Whole Tk, cannot exceed the service total or drop the total below what is already paid. The screen shows billed, discount, total after discount, paid, and still due as you type. Saving updates the invoice screen and the PDF. Remove discount clears it |
-| `/invoices/[id]/client` | Two tabs. **New client** (the default when nothing is linked) adds the person to Receivables using the invoice's own name, phone, address, and site/project, all editable, and links the bill in one step; it refuses if another client already uses that phone number. **Someone on the ledger** picks an existing client, searchable by name or phone with the likely match first. Removing an existing link is its own separate button. Accountant only |
-| `/invoices/[id]/ledger` | Put the bill on that client's ledger: due date (defaults to the issue date) and a promised date while money is still owed. Shows what they will owe after it is added. Accountant only |
+| `/invoices/[id]/client` | Two tabs. **New client** (the default when nothing is linked) adds the person to Receivables using the invoice's own name, phone, address, and site/project, all editable, and links the bill in one step; it refuses if another client already uses that phone number. **Someone on the ledger** picks an existing client, searchable by name or phone with the likely match first. Removing an existing link is its own separate button. CEO only |
+| `/invoices/[id]/ledger` | Put the bill on that client's ledger: due date (defaults to the issue date) and a promised date while money is still owed. Shows what they will owe after it is added. CEO only |
 | `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts. Payments stay as they are. Saving is blocked if the new total is below what has already been paid, or if the bill is already on a client's ledger and the total would change |
 | `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. Each receipt is listed once, in the amount-due box, with its date. Under the particulars, total amount, paid, and total due sit beside the Cubity stamp (green Paid, purple Partial payment, or red Unpaid). The ID is printed under INVOICE in the letterhead |
 | `/invoices/services` | Add a service at the top, then rename, set its usual amount, or remove each one in the list (remove shows Undo). **The list is the office list, shared by every phone.** A phone that still has the old on-device list is offered a one-time "add these to the office list" card. Defaults are the five design services |
@@ -69,15 +69,15 @@ The site is a **workspace**, not a single app. Each product owns a folder:
 - `src/app/invoices/` — invoice maker (`InvoiceShell` header + bottom nav, no role gate). Uses the same colors, cards, and wording as Receivables
 - `src/components/site-chrome.tsx` — Cubity header + office footer for hub and non-receivables screens
 - `src/lib/routes.ts` — path helpers so links do not hard-code product URLs
-- `src/lib/workspace-role.ts` — accountant vs engineer role cookie and password check (code-only, no env vars)
+- `src/lib/workspace-role.ts` — CEO (called `accountant` in code) vs engineer role cookie and password check (code-only, no env vars)
 
 To add another product later: create `src/app/<name>/`, add paths in `routes.ts`, and put a card on `/`.
 
-### Accountant and engineer
+### CEO and engineer
 
 Clicking Receivables on the hub (or opening `/receivables` with no role yet) shows a popup:
 
-- **Accountant** — password required, then full add/edit access
+- **CEO** — password required, then full add/edit access
 - **Engineer** — no password, view-only
 
 The chosen role stays in an httpOnly cookie until you tap **Log out** in the Receivables header. Opening Receivables again goes straight in and does not ask for the password. Server actions and add/edit routes reject engineers even if they hit the URL directly.
@@ -88,7 +88,7 @@ The chosen role stays in an httpOnly cookie until you tap **Log out** in the Rec
 
 - Required: name, phone
 - Optional on add: email, address
-- Company, site/project, and notes can be filled later on edit. The accountant opens **Edit** on the client page for the name, phone, and the rest. **Discount** sits in the same button grid as Edit, Add due, and Log payment. It is whole Tk, cannot be more than the amount billed, and can be removed. Outstanding, the dashboard, and the due statement use billed minus that discount
+- Company, site/project, and notes can be filled later on edit. The CEO opens **Edit** on the client page for the name, phone, and the rest. **Discount** sits in the same button grid as Edit, Add due, and Log payment. It is whole Tk, cannot be more than the amount billed, and can be removed. Outstanding, the dashboard, and the due statement use billed minus that discount
 - Call (`tel:`) and WhatsApp on the profile. WhatsApp opens that client's chat with the message "Assalamualaikum" and nothing else. Bangladesh `01…` numbers are sent as `880…`.
 
 ### Dues and payments
@@ -117,7 +117,7 @@ Mobile-first visual summary (not a table dump):
 - Overdue and upcoming queues
 - Cubity office stamp (Sylhet address, three phones, email)
 
-Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, accountant only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the accountant. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
+Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, CEO only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the CEO. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
 
 Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. Same on the website and in the Android app. Receivables and Invoice maker both run in Singapore, next to the Neon database. The invoice list and an open invoice show the same seal only while that query is still running.
 
@@ -225,6 +225,17 @@ This Mac does not have Xcode, only the command-line tools, so the app cannot be 
 
 A paid Apple Developer account is only needed for TestFlight or the App Store. Apple often rejects a pure website wrapper from the store.
 
+## Motion
+
+The app runs mostly on phones, inside the Android and iPhone wrappers, so the motion is written for a WebView rather than a desktop browser. It all lives in one block at the end of `src/app/globals.css`.
+
+- Screens and cards **rise in** (fade plus a small lift). Lists **cascade**, one row after another, and the delay stops growing after the tenth row so a long client list does not crawl.
+- Every card, tile, row, and nav icon **answers a tap** by pressing in slightly. This is the detail that makes the APK feel like an app instead of a web page.
+- Headline money figures **pop** as they land. The paid bar, the aging capsule, and the largest-balance bars **sweep** out from the left.
+- On the dashboard the rings and the 6-month lines **draw themselves on**, and the donut draws slice by slice.
+- Only `transform`, `opacity`, and `stroke-dashoffset` are animated, nothing animates while scrolling, and each animation finishes on `transform: none` so no element is left permanently on its own compositor layer.
+- A phone set to **reduce motion** gets no animation at all, only the finished screen.
+
 ## Agent rules
 
 Cursor always applies:
@@ -235,7 +246,7 @@ Cursor always applies:
 
 When editing receivables (`src/app/receivables/`, `src/lib/routes.ts`, roles, money, `AppShell`):
 
-- Accountant writes; engineer is view-only in the UI **and** on the server
+- CEO writes; engineer is view-only in the UI **and** on the server
 - Show money as **Tk** via `src/lib/money.ts`
 - Import paths from `src/lib/routes.ts` — do not hard-code `/receivables/...`
 - Mobile-first (thumb-zone bottom nav, large tap targets)
@@ -244,7 +255,7 @@ When adding a workspace product, follow `.cursor/skills/add-cubity-product/SKILL
 
 ## Invoices
 
-The invoice maker is open to anyone who taps the hub card. It does not ask for the accountant password.
+The invoice maker is open to anyone who taps the hub card. It does not ask for the CEO password — **but everything that reaches into receivables does.** Writing, editing, and deleting invoices needs no role. Linking a bill to a client, creating a client from a bill, and putting a bill on a ledger are CEO-only, blocked on the server as well as hidden in the UI, and the client link cannot be changed by editing an invoice either. Anyone without the CEO role sees the Client ledger card greyed out with "Ask the CEO to create the link", so it is clear the step exists and who does it. **A stranger or an engineer can therefore never cause a write to a client, a ledger entry, or a balance.**
 
 The service list is stored in Postgres and shared by every phone. Each service can carry the amount the office usually charges, which fills in when you pick it on an invoice. Defaults, which can be renamed, removed, or extended on **Services**:
 
@@ -258,7 +269,7 @@ A saved invoice is the record that goes in the database. It stores the service n
 
 A bill is usually for someone who is not on the ledger yet, so **Link a client** can create the client straight from the invoice, carrying over the name, phone, address, and site/project. It refuses when another client already has that phone number, so the same person does not end up with two ledgers.
 
-An invoice can be **linked to a receivables client** and then **added to their ledger**, which is what turns a bill into money owed. Adding it writes one due for the total after discount plus a payment for every receipt already on the invoice, each line carrying the invoice number, so the due statement says which bill it came from. A bill can only be added once, and while it sits on the ledger its total is frozen — to change it, void those ledger entries first. Linking and adding are accountant-only, even though the rest of the invoice maker is open.
+An invoice can be **linked to a receivables client** and then **added to their ledger**, which is what turns a bill into money owed. Adding it writes one due for the total after discount plus a payment for every receipt already on the invoice, each line carrying the invoice number, so the due statement says which bill it came from. A bill can only be added once, and while it sits on the ledger its total is frozen — to change it, void those ledger entries first. Linking and adding are CEO-only, even though the rest of the invoice maker is open.
 
 - `Invoice` — number (typed ID such as `CC420-2609-C01`), client, optional phone, address, project, issue date, optional discount, notes, and the receivables client it is linked to. **The paid total is not stored**: it is always added up from the receipts, so the screen, the PDF, the file name, and the stamp can never disagree with each other. Discount is whole Tk. Due is the service total minus discount minus what has been paid. The screen and the PDF show Discount and the total after discount when a discount is set
 - `InvoiceLine` — service name snapshot and amount
@@ -266,6 +277,9 @@ An invoice can be **linked to a receivables client** and then **added to their l
 
 ## Changelog
 
+- 2026-09-27 — The workspace calls the admin role **CEO** everywhere instead of accountant. The password and what each role can do are unchanged, so nobody has to sign in again.
+- 2026-09-27 — Motion across the app, built for the phone and the APK: screens and cards rise in, lists cascade, every card and tile answers a tap, money figures pop, the dashboard rings and lines draw themselves on, and bars sweep out. It all switches off for anyone whose phone asks for reduced motion.
+- 2026-09-27 — Only the CEO can link a bill to a client. That was already true of the linking screens; now editing an invoice cannot change the link either, and a bill already on a ledger keeps its client. Engineers see the Client ledger card greyed out with who to ask.
 - 2026-09-27 — Linking an invoice can create a brand new receivables client from the invoice's own name, phone, address, and site/project, instead of only picking someone already on the ledger. Removing a link is now its own button, so it cannot happen by accident when no client is selected.
 - 2026-09-27 — An invoice can be linked to a receivables client and added to their ledger, which writes the due and any receipts already taken, and puts the invoice number on the due statement. While a bill is on the ledger its total is frozen; edit and discount say so.
 - 2026-09-27 — The service list moved off the phone into the office database, so every phone sees the same services. A service can carry the amount usually charged, which fills in on a new invoice. A phone with the old on-device list is offered a one-time import.

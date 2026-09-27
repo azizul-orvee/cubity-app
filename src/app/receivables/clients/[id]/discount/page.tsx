@@ -15,7 +15,7 @@ export default async function ClientDiscountPage({ params }: { params: Promise<{
   const status = clientStatus(client);
 
   return (
-    <div className="mx-auto grid max-w-lg gap-7">
+    <div className="cb-stagger mx-auto grid max-w-lg gap-7">
       <div>
         <Link href={receivables.client(client.id)} className="text-sm font-medium text-primary">
           Back to client

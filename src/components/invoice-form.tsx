@@ -46,7 +46,7 @@ function revealField(event: FocusEvent<HTMLElement>) {
 
 function Section({ title, hint, aside, children }: { title: string; hint?: string; aside?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
+    <section className="cb-rise rounded-[1.75rem] bg-white px-6 py-6 ring-1 ring-black/[0.06]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
@@ -405,7 +405,7 @@ export function InvoiceForm({
                     type="button"
                     onClick={() => toggle(service.id)}
                     aria-pressed={on}
-                    className="flex min-h-12 w-full items-center gap-3 text-left"
+                    className="cb-tap flex min-h-12 w-full items-center gap-3 text-left"
                   >
                     <span
                       className={cn(

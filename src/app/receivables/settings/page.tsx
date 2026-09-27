@@ -12,7 +12,7 @@ export default async function PaymentSettingsPage() {
   const payment = await getPaymentInstructions();
 
   return (
-    <div className="mx-auto grid max-w-2xl gap-6">
+    <div className="cb-stagger mx-auto grid max-w-2xl gap-6">
       <div>
         <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
           Company

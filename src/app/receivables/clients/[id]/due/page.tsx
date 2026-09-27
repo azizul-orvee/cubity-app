@@ -15,7 +15,7 @@ export default async function AddDuePage({ params }: { params: Promise<{ id: str
   const status = clientStatus(client);
 
   return (
-    <div className="mx-auto grid max-w-2xl gap-6">
+    <div className="cb-stagger mx-auto grid max-w-2xl gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Add due for {client.name}</h1>
         <p className="text-sm text-muted-foreground">

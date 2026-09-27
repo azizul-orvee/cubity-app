@@ -85,7 +85,7 @@ function ModeTab({
       onClick={onClick}
       aria-pressed={on}
       className={cn(
-        "flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-center text-sm font-semibold",
+        "cb-tap flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-center text-sm font-semibold",
         on ? "bg-white text-foreground ring-1 ring-border" : "text-muted-foreground",
       )}
     >
@@ -263,7 +263,7 @@ function ExistingClientForm({
                         onClick={() => setPicked(client.id)}
                         aria-pressed={on}
                         className={cn(
-                          "flex min-h-16 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left",
+                          "cb-tap flex min-h-16 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left",
                           on ? "bg-white ring-2 ring-primary" : "bg-[#F6FAFA]",
                         )}
                       >

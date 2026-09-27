@@ -15,7 +15,7 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
   const status = clientStatus(client);
 
   return (
-    <div className="mx-auto grid max-w-lg gap-5">
+    <div className="cb-stagger mx-auto grid max-w-lg gap-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Log payment</h1>
         <p className="mt-1 text-base text-muted-foreground">

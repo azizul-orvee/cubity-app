@@ -41,7 +41,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="grid min-w-0 gap-5 [&>*]:min-w-0">
+    <div className="cb-stagger grid min-w-0 gap-5 [&>*]:min-w-0">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
@@ -68,7 +68,7 @@ export default async function HomePage() {
         <p className="text-xs font-semibold tracking-[0.18em] text-white/80 uppercase">
           Total to collect
         </p>
-        <p className="mt-2 text-4xl font-semibold tracking-tight">{formatMoney(snapshot.totalOutstanding)}</p>
+        <p className="cb-pop cb-d2 mt-2 text-4xl font-semibold tracking-tight">{formatMoney(snapshot.totalOutstanding)}</p>
         <p className="mt-2 text-sm text-white/85">
           {snapshot.clientsWithDues} {snapshot.clientsWithDues === 1 ? "client" : "clients"} with open dues
           {snapshot.clientCount ? ` · ${snapshot.clientCount} on the books` : ""}
@@ -76,12 +76,12 @@ export default async function HomePage() {
         <div className="mt-5 grid grid-cols-2 gap-2">
           <Link
             href={receivables.clientsList("overdue")}
-            className="rounded-2xl bg-white/15 px-3 py-3 backdrop-blur-sm"
+            className="cb-tap rounded-2xl bg-white/15 px-3 py-3 backdrop-blur-sm"
           >
             <p className="text-[11px] text-white/75">Overdue</p>
             <p className="text-lg font-semibold">{formatMoney(snapshot.overdueAmount)}</p>
           </Link>
-          <Link href={receivables.clientsList("due")} className="rounded-2xl bg-black/10 px-3 py-3 backdrop-blur-sm">
+          <Link href={receivables.clientsList("due")} className="cb-tap rounded-2xl bg-black/10 px-3 py-3 backdrop-blur-sm">
             <p className="text-[11px] text-white/75">Collected this month</p>
             <p className="text-lg font-semibold">{formatMoney(snapshot.collectedThisMonth)}</p>
           </Link>

@@ -32,7 +32,7 @@ export default async function HubPage() {
   const role = await getWorkspaceRole();
   return (
     <SiteChrome>
-      <div className="mx-auto grid max-w-lg gap-8 md:max-w-3xl">
+      <div className="cb-stagger mx-auto grid max-w-lg gap-8 md:max-w-3xl">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
             {COMPANY.city}
@@ -45,7 +45,7 @@ export default async function HubPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="cb-stagger grid gap-4 md:grid-cols-2">
           {products.map((product) => {
             const Icon = product.icon;
             const card = (
@@ -61,7 +61,7 @@ export default async function HubPage() {
               </>
             );
             const cardClass =
-              "w-full rounded-[1.75rem] bg-white p-6 text-left ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]";
+              "cb-tap cb-tap-soft w-full rounded-[1.75rem] bg-white p-6 text-left ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]";
 
             if (product.href === receivables.root && !role) {
               return (

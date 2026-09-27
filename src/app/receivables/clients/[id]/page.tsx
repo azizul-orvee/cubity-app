@@ -29,7 +29,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const paidPercent = billBase > 0 ? Math.min(status.totalPaid / billBase, 1) : 0;
 
   return (
-    <div className="grid gap-8">
+    <div className="cb-stagger grid gap-8">
       <div>
         <Link href={receivables.clients} className="text-sm font-medium text-primary">
           Clients
@@ -55,11 +55,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         <p className="text-[11px] font-semibold tracking-[0.2em] text-white/70 uppercase">
           Outstanding
         </p>
-        <p className="mt-3 text-[2.35rem] leading-none font-semibold tracking-tight">
+        <p className="cb-pop cb-d2 mt-3 text-[2.35rem] leading-none font-semibold tracking-tight">
           {formatMoney(status.outstanding)}
         </p>
         <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/20">
-          <div className="h-full rounded-full bg-white" style={{ width: `${paidPercent * 100}%` }} />
+          <div className="cb-sweep h-full rounded-full bg-white" style={{ width: `${paidPercent * 100}%` }} />
         </div>
         <p className="mt-3 text-sm leading-relaxed text-white/85">
           {status.discount > 0
@@ -143,7 +143,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             {canEdit ? " Log billed amount, paid now, and the promised date for the rest." : ""}
           </p>
         ) : (
-          <div className="grid gap-3">
+          <div className="cb-stagger grid gap-3">
             {ledger.map((line) => (
               <article
                 key={line.entry.id}
@@ -215,7 +215,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           <p className="mt-1 mb-5 text-sm leading-relaxed text-muted-foreground">
             Changes that are not money: discounts and voided lines.
           </p>
-          <ul className="grid gap-3">
+          <ul className="cb-stagger grid gap-3">
             {events.map((event) => (
               <li key={event.id} className="rounded-2xl bg-[#F6FAFA] px-4 py-3">
                 <p className="text-sm text-muted-foreground">{formatDate(event.createdAt)}</p>
@@ -314,8 +314,8 @@ function Action({
   external?: boolean;
 }) {
   const className = primary
-    ? "flex min-h-[5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-primary px-2 text-sm font-semibold text-primary-foreground"
-    : "flex min-h-[5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-white px-2 text-sm font-semibold ring-1 ring-border";
+    ? "cb-tap flex min-h-[5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-primary px-2 text-sm font-semibold text-primary-foreground"
+    : "cb-tap flex min-h-[5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] bg-white px-2 text-sm font-semibold ring-1 ring-border";
 
   const body = (
     <>

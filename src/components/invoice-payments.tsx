@@ -44,7 +44,7 @@ export function InvoicePayments({
       {payments.length === 0 ? (
         <p className="mt-5 text-sm text-muted-foreground">Nothing recorded yet.</p>
       ) : (
-        <ul className="mt-5 grid gap-3">
+        <ul className="cb-stagger mt-5 grid gap-3">
           {payments.map((payment) => (
             <li key={payment.id} className="flex items-center gap-3 rounded-2xl bg-[#F6FAFA] px-4 py-3">
               <div className="min-w-0 flex-1">

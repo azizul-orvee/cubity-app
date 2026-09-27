@@ -8,6 +8,7 @@ import { sumPayments } from "@/lib/invoice-queries";
 import { clampDiscount } from "@/lib/money";
 import { revalidateClient, revalidateInvoices } from "@/lib/revalidate";
 import { invoices } from "@/lib/routes";
+import { canEditReceivables } from "@/lib/workspace-role";
 
 function wholeTakaToPoisha(raw: string) {
   const trimmed = raw.trim();
@@ -71,8 +72,15 @@ function readInvoiceId(formData: FormData) {
   return { number };
 }
 
-/** The hidden client link the form carries, so editing a bill never drops it. */
-async function readClientLink(formData: FormData) {
+/**
+ * The hidden client link the form carries, so editing a bill never drops it.
+ *
+ * Writing invoices is open to anyone, but pointing a bill at a receivables
+ * client is a receivables change, so only the CEO may set or clear it. Everyone
+ * else keeps whatever the bill already had, whatever the form says.
+ */
+async function readClientLink(formData: FormData, current: string | null) {
+  if (!(await canEditReceivables())) return { clientId: current };
   const clientId = formString(formData, "clientId").trim();
   if (!clientId) return { clientId: null };
   const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true } });
@@ -108,7 +116,6 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   const discount = readDiscount(formString(formData, "discount"), billed);
   if ("error" in discount) return discount;
   const net = clampDiscount(billed, discount.discountAmount).net;
-  const { clientId } = await readClientLink(formData);
 
   const [taken, existing] = await Promise.all([
     prisma.invoice.findUnique({ where: { number }, select: { id: true } }),
@@ -117,6 +124,7 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
           where: { id: invoiceId },
           select: {
             id: true,
+            clientId: true,
             discountAmount: true,
             payments: { select: { amount: true } },
             lines: { select: { amount: true } },
@@ -130,6 +138,10 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
   if (invoiceId) {
     if (!existing) return { error: "That invoice is no longer here." };
     const alreadyPaid = sumPayments(existing.payments);
+    const link = await readClientLink(formData, existing.clientId);
+    // A bill already on a ledger stays with that client; unlinking it there
+    // would orphan the due sitting on their account.
+    const clientId = existing.ledgerEntries.length > 0 ? existing.clientId : link.clientId;
     if (net < alreadyPaid) {
       return { error: "This total after discount is lower than the payments already recorded. Remove a payment on the invoice first." };
     }
@@ -161,6 +173,8 @@ export async function saveInvoice(invoiceId: string | null, formData: FormData) 
     revalidateInvoices(invoiceId);
     redirect(invoices.invoice(invoiceId));
   }
+
+  const { clientId } = await readClientLink(formData, null);
 
   let firstPayment = 0;
   let paidDate: Date | null = null;

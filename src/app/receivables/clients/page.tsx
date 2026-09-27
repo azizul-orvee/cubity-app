@@ -59,7 +59,7 @@ export default async function ClientsPage({
     });
 
   return (
-    <div className="grid gap-8">
+    <div className="cb-stagger grid gap-8">
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
@@ -129,12 +129,12 @@ export default async function ClientsPage({
           ) : null}
         </Empty>
       ) : (
-        <div className="grid gap-3">
+        <div className="cb-stagger grid gap-3">
           {rows.map(({ client, status }, index) => (
             <Link
               key={client.id}
               href={receivables.client(client.id)}
-              className="flex items-start gap-4 rounded-[1.5rem] bg-white px-5 py-5 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
+              className="cb-tap flex items-start gap-4 rounded-[1.5rem] bg-white px-5 py-5 ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,40,40,0.04)]"
             >
               <span
                 className="grid size-14 shrink-0 place-items-center rounded-full text-sm font-semibold tracking-wide text-white"

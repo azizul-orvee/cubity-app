@@ -131,7 +131,7 @@ export function ServiceEditor({ services }: { services: CatalogService[] }) {
           <p className="mt-1 mb-5 text-sm leading-relaxed text-muted-foreground">
             {services.length} {services.length === 1 ? "service" : "services"} to pick from on an invoice.
           </p>
-          <ol className="grid gap-3">
+          <ol className="cb-stagger grid gap-3">
             {services.map((service, index) => (
               <ServiceRow
                 key={service.id}

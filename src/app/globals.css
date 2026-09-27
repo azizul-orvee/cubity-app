@@ -223,3 +223,154 @@ select {
 html.keyboard-open .invoice-dock {
   position: static;
 }
+
+/* ===========================================================================
+   Motion
+   ---------------------------------------------------------------------------
+   The app lives in an Android WebView and in mobile Safari, so every animation
+   here sticks to transform, opacity, and stroke-dashoffset: properties the
+   compositor can handle without laying the page out again. Nothing animates on
+   scroll, durations stay short enough to feel like the app is answering rather
+   than performing, and the whole layer switches off for prefers-reduced-motion.
+   =========================================================================== */
+
+:root {
+  /* One easing family, so everything decelerates the same way. */
+  --cb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --cb-ease-soft: cubic-bezier(0.32, 0.72, 0.28, 1);
+  --cb-enter: 440ms;
+  --cb-step: 55ms;
+}
+
+/*
+ * Each of these lands on `transform: none` rather than an identity transform.
+ * A left-over transform keeps the element on its own compositor layer for the
+ * rest of the session, which costs memory on a long list and can soften text
+ * on cheaper Android screens.
+ */
+@keyframes cb-rise {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cb-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes cb-sweep {
+  from { transform: scaleX(0); }
+  to   { transform: none; }
+}
+
+@keyframes cb-draw {
+  from { stroke-dashoffset: var(--cb-dash, 1); }
+}
+
+@keyframes cb-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* A card, section, or screen arriving. */
+.cb-rise {
+  animation: cb-rise var(--cb-enter) var(--cb-ease) both;
+}
+
+/* Money and other headline figures: a touch of scale so the number lands. */
+.cb-pop {
+  animation: cb-pop 520ms var(--cb-ease) both;
+}
+
+/*
+ * Children arrive one after another. The delay is capped at the tenth child so
+ * a client list of sixty rows does not take three seconds to finish.
+ */
+.cb-stagger > * {
+  animation: cb-rise var(--cb-enter) var(--cb-ease) both;
+}
+.cb-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.cb-stagger > *:nth-child(2) { animation-delay: calc(var(--cb-step) * 1); }
+.cb-stagger > *:nth-child(3) { animation-delay: calc(var(--cb-step) * 2); }
+.cb-stagger > *:nth-child(4) { animation-delay: calc(var(--cb-step) * 3); }
+.cb-stagger > *:nth-child(5) { animation-delay: calc(var(--cb-step) * 4); }
+.cb-stagger > *:nth-child(6) { animation-delay: calc(var(--cb-step) * 5); }
+.cb-stagger > *:nth-child(7) { animation-delay: calc(var(--cb-step) * 6); }
+.cb-stagger > *:nth-child(8) { animation-delay: calc(var(--cb-step) * 7); }
+.cb-stagger > *:nth-child(9) { animation-delay: calc(var(--cb-step) * 8); }
+.cb-stagger > *:nth-child(n + 10) { animation-delay: calc(var(--cb-step) * 9); }
+
+/*
+ * Press feedback. This is what makes a WebView feel like an app instead of a
+ * page: the surface answers the thumb before the next screen has loaded.
+ */
+.cb-tap {
+  transition: transform 140ms var(--cb-ease-soft), box-shadow 140ms var(--cb-ease-soft);
+  -webkit-tap-highlight-color: transparent;
+}
+.cb-tap:active {
+  transform: scale(0.972);
+}
+/* A big surface should compress less, or it looks rubbery. */
+.cb-tap-soft:active {
+  transform: scale(0.988);
+}
+
+/* A bar or capsule filling from its left edge. */
+.cb-sweep {
+  transform-origin: left center;
+  animation: cb-sweep 720ms var(--cb-ease) both;
+  animation-delay: 120ms;
+}
+
+/* An SVG stroke drawing itself on. Pair with pathLength={1}. */
+.cb-draw {
+  animation: cb-draw 900ms var(--cb-ease) both;
+}
+
+.cb-fade {
+  animation: cb-fade 600ms var(--cb-ease-soft) both;
+}
+
+/* Delay helpers, for a chart that should follow the card it sits in. */
+.cb-d1 { animation-delay: 70ms; }
+.cb-d2 { animation-delay: 140ms; }
+.cb-d3 { animation-delay: 220ms; }
+.cb-d4 { animation-delay: 300ms; }
+
+/* The bottom-nav icon acknowledging a tap. */
+.cb-nav {
+  transition: transform 180ms var(--cb-ease), color 180ms linear;
+}
+.cb-nav:active {
+  transform: scale(0.9);
+}
+.cb-nav-active {
+  animation: cb-pop 320ms var(--cb-ease) both;
+}
+
+/*
+ * Someone who has asked their phone to calm down gets no motion at all, only
+ * the finished state. Every rule above has `both`, so the end frame is what is
+ * already on screen.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .cb-rise,
+  .cb-pop,
+  .cb-stagger > *,
+  .cb-sweep,
+  .cb-draw,
+  .cb-fade,
+  .cb-nav-active {
+    animation: none !important;
+  }
+  .cb-tap,
+  .cb-nav {
+    transition: none;
+  }
+  .cb-tap:active,
+  .cb-tap-soft:active,
+  .cb-nav:active {
+    transform: none;
+  }
+}

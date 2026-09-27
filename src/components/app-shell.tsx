@@ -48,7 +48,7 @@ export function AppShell({
                 CUBITY
               </span>
               <span className="block text-[11px] text-muted-foreground">
-                {canEdit ? "Receivables" : "Receivables · view only"}
+                {canEdit ? "Receivables · CEO" : "Receivables · view only"}
               </span>
             </span>
           </Link>
@@ -124,11 +124,11 @@ export function AppShell({
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  "cb-nav flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className={cn("size-5", active ? "cb-nav-active" : null)} />
                 {tab.label}
               </Link>
             );
@@ -137,7 +137,7 @@ export function AppShell({
             href={receivables.outstandingPdf}
             title="Download outstanding PDF?"
             description="This saves a company-wide list of every client who still owes Cubity."
-            className="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
+            className="cb-nav flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
           >
             <FileDown className="size-5" />
             PDF
@@ -145,7 +145,7 @@ export function AppShell({
           {canEdit ? (
             <Link
               href={receivables.clientsNew}
-              className="-mt-5 flex flex-col items-center justify-center text-[11px] font-semibold text-primary"
+              className="cb-nav -mt-5 flex flex-col items-center justify-center text-[11px] font-semibold text-primary"
             >
               <span className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(46,196,182,0.45)]">
                 <Plus className="size-6" />

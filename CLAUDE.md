@@ -49,7 +49,7 @@ Next.js 16 App Router, React 19, Prisma 6 on Neon Postgres, Tailwind 4 with shad
 **Workspace hub, not a single app.** `/` (`src/app/page.tsx`) shows product cards. Each product owns `src/app/<slug>/`:
 
 - `receivables/` — dues, payments, promises, dashboard, PDFs. Its layout is `force-dynamic` with `preferredRegion = "sin1"` (next to Neon), and it wraps pages in `AppShell`, or the role picker when there's no role cookie.
-- `invoices/` — the invoice maker, with `InvoiceShell` chrome and **no role gate**: anyone who opens the hub card can create, edit, and delete invoices. The two bridge screens that reach into receivables data (`/invoices/[id]/client` and `/ledger`) *are* accountant-gated, so the client list is never exposed to an ungated visitor.
+- `invoices/` — the invoice maker, with `InvoiceShell` chrome and **no role gate**: anyone who opens the hub card can create, edit, and delete invoices. Everything that touches receivables *is* CEO-gated: both bridge screens (`/invoices/[id]/client`, `/ledger`), all three actions in `invoice-ledger-actions.ts`, and the `clientId` field inside `saveInvoice` (`readClientLink` ignores it for non-CEOs, so a tampered form can't relink a bill). Keep it that way: `invoice-actions.ts` must never write `Client` or `LedgerEntry`.
 - Hub-style screens use `SiteChrome`. To add a product, follow `.cursor/skills/add-cubity-product/SKILL.md`: routes helper, folder, hub card, docs.
 
 **Paths:** every link and redirect goes through the helpers in `src/lib/routes.ts` (`receivables.*`, `invoices.*`). Never hard-code `/receivables/...` or `/invoices/...`. Old `/clients` and `/reports/outstanding` URLs redirect through `next.config.ts`.
@@ -80,7 +80,9 @@ Next.js 16 App Router, React 19, Prisma 6 on Neon Postgres, Tailwind 4 with shad
 
 ### Roles (receivables only)
 
-`src/lib/workspace-role.ts` stores accountant or engineer in an httpOnly cookie holding a sha256 role token (`cubity_role`, ~400 days). The password is checked in code with a timing-safe compare. Accountant can write; engineer is view-only. Enforce this in **both** places:
+**The admin role is called "CEO" in the UI and `accountant` in the code** — the identifier, the cookie token, and `requireAccountant()` keep the old name on purpose, so renaming the label didn't invalidate everyone's cookie and log the office out. Don't "fix" the mismatch without deciding to sign everyone out.
+
+`src/lib/workspace-role.ts` stores accountant or engineer in an httpOnly cookie holding a sha256 role token (`cubity_role`, ~400 days). The password is checked in code with a timing-safe compare. The CEO can write; engineer is view-only. Enforce this in **both** places:
 
 - Hide write controls when `canEdit` is false.
 - In every write server action: `const denied = await requireAccountant(); if (denied) return denied;`. Write *pages* call `await redirectUnlessAccountant(...)` instead (it redirects rather than returning an error).
@@ -137,7 +139,9 @@ The pattern in every form: `"use client"`, `useActionState` wrapping a `.bind(nu
 
 ## UI conventions
 
-Mobile-first: thumb-zone bottom nav, large tap targets, hero money cards, rounded `1.75rem` white cards on a teal radial-gradient background. Teal is `#128C86`. Receivables and Invoices deliberately share the same look, spacing, and wording. Dashboard charts in `src/components/charts.tsx` are hand-written SVG — there is no chart library. `RouteStamp` + `CubityStampLoader` show the Cubity seal (one of three random animations) while a navigation is pending, and `loading.tsx` files do the same for slow queries.
+Mobile-first: thumb-zone bottom nav, large tap targets, hero money cards, rounded `1.75rem` white cards on a teal radial-gradient background. Teal is `#128C86`.
+
+**Motion** lives in one commented block at the end of `src/app/globals.css` and is applied with utility classes, not per-component CSS: `cb-rise` (a card or screen arriving), `cb-stagger` (children cascade, capped at 10 steps), `cb-tap` / `cb-tap-soft` (press feedback — the thing that makes the APK feel native), `cb-pop` (money figures), `cb-sweep` (bars filling), `cb-draw` (SVG strokes drawing on, paired with `pathLength={1}` and a `--cb-dash` style var), `cb-fade`, `cb-nav`, and `cb-d1`–`cb-d4` delays. Rules: animate only `transform`, `opacity`, and `stroke-dashoffset`; never animate on scroll; finish on `transform: none` so nothing stays layer-promoted; and add any new animation to the `prefers-reduced-motion` block. The shadcn `Button` already has its own `active:translate-y-px`, so don't put `cb-tap` on it. Receivables and Invoices deliberately share the same look, spacing, and wording. Dashboard charts in `src/components/charts.tsx` are hand-written SVG — there is no chart library. `RouteStamp` + `CubityStampLoader` show the Cubity seal (one of three random animations) while a navigation is pending, and `loading.tsx` files do the same for slow queries.
 
 ## Checklist for a typical change
 

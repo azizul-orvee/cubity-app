@@ -22,10 +22,10 @@ export default async function ReceivablesLayout({ children }: { children: ReactN
             Receivables
           </p>
           <h1 className="mt-2 text-[2rem] leading-[1.1] font-semibold tracking-tight">
-            Choose accountant or engineer
+            Choose CEO or engineer
           </h1>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            Accountants can add and edit. Engineers can only view.
+            The CEO can add and edit. Engineers can only view.
           </p>
         </div>
         <RoleGate blocking />

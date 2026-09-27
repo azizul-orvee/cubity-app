@@ -68,7 +68,7 @@ async function InvoiceGroups() {
 
 export default function InvoicesPage() {
   return (
-    <div className="mx-auto grid max-w-lg grid-cols-1 gap-2 md:max-w-2xl">
+    <div className="cb-stagger mx-auto grid max-w-lg grid-cols-1 gap-2 md:max-w-2xl">
       <div>
         <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Billing</p>
         <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Invoices</h1>

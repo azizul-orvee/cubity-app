@@ -46,7 +46,7 @@ export function DonutChart({
         {total > 0
           ? slices
               .filter((slice) => slice.value > 0)
-              .map((slice) => {
+              .map((slice, index) => {
                 const sweep = (slice.value / total) * 360;
                 const start = cursor;
                 cursor += sweep;
@@ -58,13 +58,18 @@ export function DonutChart({
                     stroke={slice.color}
                     strokeWidth={thickness}
                     strokeLinecap="butt"
+                    // pathLength 1 makes the dash maths independent of the arc's real length.
+                    pathLength={1}
+                    strokeDasharray={1}
+                    className="cb-draw"
+                    style={{ ["--cb-dash" as string]: 1, animationDelay: `${index * 140}ms` }}
                   />
                 );
               })
           : null}
       </svg>
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
-        <div>
+        <div className="cb-pop cb-d3">
           <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
             {centerLabel}
           </p>
@@ -111,10 +116,13 @@ export function RingMeter({
             strokeLinecap="round"
             strokeDasharray={c}
             strokeDashoffset={c * (1 - clamped)}
+            className="cb-draw"
+            // Winds on from an empty ring to wherever this percentage lands.
+            style={{ ["--cb-dash" as string]: c }}
           />
         </svg>
         <div className="absolute inset-0 grid place-items-center">
-          <span className="text-sm font-semibold">{Math.round(clamped * 100)}%</span>
+          <span className="cb-pop cb-d3 text-sm font-semibold">{Math.round(clamped * 100)}%</span>
         </div>
       </div>
       <div className="text-center">
@@ -164,11 +172,31 @@ export function DualLineChart({
           strokeDasharray="4 6"
         />
       ))}
-      {area ? <path d={area} fill="url(#collectFill)" /> : null}
-      <polyline fill="none" stroke="#6366F1" strokeWidth="2.5" strokeLinejoin="round" points={toPoints("billed")} />
-      <polyline fill="none" stroke="#2EC4B6" strokeWidth="3" strokeLinejoin="round" points={toPoints("collected")} />
+      {area ? <path d={area} fill="url(#collectFill)" className="cb-fade cb-d3" /> : null}
+      <polyline
+        fill="none"
+        stroke="#6366F1"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        points={toPoints("billed")}
+        pathLength={1}
+        strokeDasharray={1}
+        className="cb-draw"
+        style={{ ["--cb-dash" as string]: 1 }}
+      />
+      <polyline
+        fill="none"
+        stroke="#2EC4B6"
+        strokeWidth="3"
+        strokeLinejoin="round"
+        points={toPoints("collected")}
+        pathLength={1}
+        strokeDasharray={1}
+        className="cb-draw cb-d2"
+        style={{ ["--cb-dash" as string]: 1 }}
+      />
       {points.map((point, index) => (
-        <g key={point.label}>
+        <g key={point.label} className="cb-fade" style={{ animationDelay: `${420 + index * 60}ms` }}>
           <circle cx={xAt(index)} cy={yAt(point.billed)} r="3.5" fill="#6366F1" />
           <circle cx={xAt(index)} cy={yAt(point.collected)} r="4" fill="#2EC4B6" stroke="white" strokeWidth="1.5" />
           <text x={xAt(index)} y={height - 8} textAnchor="middle" className="fill-muted-foreground" fontSize="10">
@@ -192,18 +220,19 @@ export function HorizontalBars({
 
   return (
     <div className="grid gap-3">
-      {rows.map((row) => (
-        <Link key={row.id} href={row.href} className="grid gap-1">
+      {rows.map((row, index) => (
+        <Link key={row.id} href={row.href} className="cb-tap grid gap-1">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="truncate font-medium">{row.name}</span>
             <span className="shrink-0 font-semibold">{formatMoney(row.value)}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full"
+              className="cb-sweep h-full rounded-full"
               style={{
                 width: `${Math.max(8, (row.value / max) * 100)}%`,
                 background: row.color ?? "linear-gradient(90deg,#2EC4B6,#38BDF8)",
+                animationDelay: `${120 + index * 70}ms`,
               }}
             />
           </div>
@@ -222,7 +251,7 @@ export function AgingCapsule({
 
   return (
     <div className="grid gap-4">
-      <div className="flex h-4 overflow-hidden rounded-full bg-muted">
+      <div className="cb-sweep flex h-4 overflow-hidden rounded-full bg-muted">
         {total === 0 ? (
           <div className="w-full bg-muted" />
         ) : (
@@ -237,7 +266,7 @@ export function AgingCapsule({
             ))
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="cb-stagger grid grid-cols-2 gap-2 sm:grid-cols-3">
         {items.map((item) => (
           <div key={item.key} className="flex items-start gap-2 rounded-xl bg-muted/60 px-2.5 py-2">
             <span className="mt-1 size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
@@ -254,7 +283,7 @@ export function AgingCapsule({
 
 export function ChartLegend({ slices }: { slices: ChartSlice[] }) {
   return (
-    <div className="grid gap-2">
+    <div className="cb-stagger grid gap-2">
       {slices.map((slice) => (
         <div key={slice.label} className="flex items-center justify-between gap-3 text-sm">
           <span className="flex items-center gap-2">

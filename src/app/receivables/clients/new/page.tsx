@@ -6,7 +6,7 @@ export default async function NewClientPage() {
   await redirectUnlessAccountant();
 
   return (
-    <div className="mx-auto grid max-w-lg gap-7">
+    <div className="cb-stagger mx-auto grid max-w-lg gap-7">
       <div>
         <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
           New account

@@ -11,7 +11,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   if (!invoice) notFound();
 
   return (
-    <div className="mx-auto grid max-w-lg grid-cols-1 gap-7">
+    <div className="cb-stagger mx-auto grid max-w-lg grid-cols-1 gap-7">
       <div>
         <Link href={invoices.invoice(invoice.id)} className="text-sm font-medium text-primary">
           Back to invoice
