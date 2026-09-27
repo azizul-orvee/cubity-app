@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { CubityStampLoader } from "@/components/cubity-stamp-loader";
+import { ListSkeleton } from "@/components/screen-skeletons";
 import { ServiceEditor } from "@/components/service-editor";
 import { ServiceImport } from "@/components/service-import";
 import { getServices } from "@/lib/service-queries";
@@ -26,7 +26,7 @@ export default function InvoiceServicesPage() {
           with.
         </p>
       </div>
-      <Suspense fallback={<CubityStampLoader />}>
+      <Suspense fallback={<ListSkeleton header={false} rows={5} />}>
         <Catalog />
       </Suspense>
     </div>

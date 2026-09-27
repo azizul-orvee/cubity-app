@@ -119,6 +119,8 @@ Mobile-first visual summary (not a table dump):
 
 Bottom navigation on phones (inside receivables): Home, Clients, company PDF (asks to confirm before download), Add client (center plus, accountant only). The Cubity mark in that header returns to the workspace hub. The gear opens payment details (bKash and bank account) for the accountant. Engineers see “view only” in the header and no add, edit, settings, or delete controls.
 
+Every screen has its own loading state, so a tap opens the new screen immediately rather than leaving the old one up while the database answers. Most screens show a grey sketch of what is coming (the dashboard sketches the hero card, the rings and the charts, and its heading is real from the first moment). Opening Clients, a client account, or an invoice shows the **Cubity seal** instead. The full-screen seal that used to appear on every tap now waits about a fifth of a second first, so it only shows up when a screen really is slow.
+
 Opening Clients (or a client account) from Home shows the **Cubity seal** only while the database is still loading. It disappears as soon as the page is ready. The seal reveals itself once, then a teal arc circles it and the stamp breathes for as long as the screen is still coming, so a slow load never looks frozen. Switching filters on the client list counts as loading too, so the seal clears the moment those results arrive. Same on the website and in the Android app. Receivables and Invoice maker both run in Singapore, next to the Neon database. The invoice list and an open invoice show the same seal only while that query is still running.
 
 ### PDFs
@@ -276,6 +278,8 @@ An invoice can be **linked to a receivables client** and then **added to their l
 - `InvoicePayment` — one receipt on that invoice: amount, date, optional note. The paid total is the sum of these receipts. A later payment is another row on the same invoice, not a new invoice
 
 ## Changelog
+
+- 2026-09-27 — Every screen now has its own loading state, so tapping something shows that screen straight away instead of holding the previous one until the database answers. Forms and lists show a grey sketch of what is coming; the dashboard sketches its hero card, rings and charts, and its heading appears immediately while the slow query finishes underneath. The Cubity seal now only appears if a screen takes longer than a moment to open, rather than flashing on every tap.
 
 - 2026-09-27 — The loading seal keeps moving until the screen arrives. It used to play its reveal once and then sit still, which looked frozen on a slow connection. A teal arc now circles it and the stamp breathes; a phone set to reduce motion gets a slow fade instead. Changing a client-list filter also clears the seal properly, and the safety timeout that hides it went from 8 to 20 seconds so it no longer gives up during a genuinely slow load.
 

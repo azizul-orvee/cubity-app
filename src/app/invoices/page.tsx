@@ -10,7 +10,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { CubityStampLoader } from "@/components/cubity-stamp-loader";
+import { ListSkeleton } from "@/components/screen-skeletons";
 import { InvoiceList, type InvoiceGroup } from "@/components/invoice-list";
 import { addDaysToInput, DHAKA_TZ, formatDateLong, todayInputValue } from "@/lib/dates";
 import { getInvoices, invoiceBill } from "@/lib/invoice-queries";
@@ -73,7 +73,7 @@ export default function InvoicesPage() {
         <p className="text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">Billing</p>
         <h1 className="mt-2 text-[2rem] leading-none font-semibold tracking-tight">Invoices</h1>
       </div>
-      <Suspense fallback={<CubityStampLoader />}>
+      <Suspense fallback={<ListSkeleton header={false} />}>
         <InvoiceGroups />
       </Suspense>
     </div>

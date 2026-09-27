@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, CalendarClock, Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   RingMeter,
 } from "@/components/charts";
 import { CompanyStamp } from "@/components/company-stamp";
+import { DashboardSkeleton } from "@/components/screen-skeletons";
 import { COMPANY } from "@/lib/company";
 import { formatDate } from "@/lib/dates";
 import { AGING_COLORS, AGING_LABELS, type AgingKey } from "@/lib/ledger";
@@ -20,25 +21,13 @@ import { getDashboardData } from "@/lib/queries";
 import { receivables } from "@/lib/routes";
 import { canEditReceivables } from "@/lib/workspace-role";
 
+/**
+ * The header only needs the role cookie, so it paints straight away while the
+ * dashboard query is still running. Everything below it reads every client with
+ * their whole ledger, which is the slowest query in the app.
+ */
 export default async function HomePage() {
-  const [{ snapshot }, canEdit] = await Promise.all([getDashboardData(), canEditReceivables()]);
-  const collectionRate =
-    snapshot.billedThisMonth > 0 ? snapshot.collectedThisMonth / snapshot.billedThisMonth : 0;
-  const overdueShare =
-    snapshot.totalOutstanding > 0 ? snapshot.overdueAmount / snapshot.totalOutstanding : 0;
-  const upcomingShare =
-    snapshot.totalOutstanding > 0 ? snapshot.upcomingAmount / snapshot.totalOutstanding : 0;
-  const mixSlices = [
-    { label: "Overdue", value: snapshot.mix.overdue, color: "#EF4444" },
-    { label: "Promised soon", value: snapshot.mix.upcoming, color: "#F59E0B" },
-    { label: "Later / unscheduled", value: snapshot.mix.later, color: "#2EC4B6" },
-  ];
-  const agingItems = (Object.keys(AGING_LABELS) as AgingKey[]).map((key) => ({
-    key,
-    label: AGING_LABELS[key],
-    value: snapshot.aging[key],
-    color: AGING_COLORS[key],
-  }));
+  const canEdit = await canEditReceivables();
 
   return (
     <div className="cb-stagger grid min-w-0 gap-5 [&>*]:min-w-0">
@@ -61,6 +50,35 @@ export default async function HomePage() {
           </Button>
         ) : null}
       </div>
+      <Suspense fallback={<DashboardSkeleton header={false} />}>
+        <DashboardBody canEdit={canEdit} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function DashboardBody({ canEdit }: { canEdit: boolean }) {
+  const { snapshot } = await getDashboardData();
+  const collectionRate =
+    snapshot.billedThisMonth > 0 ? snapshot.collectedThisMonth / snapshot.billedThisMonth : 0;
+  const overdueShare =
+    snapshot.totalOutstanding > 0 ? snapshot.overdueAmount / snapshot.totalOutstanding : 0;
+  const upcomingShare =
+    snapshot.totalOutstanding > 0 ? snapshot.upcomingAmount / snapshot.totalOutstanding : 0;
+  const mixSlices = [
+    { label: "Overdue", value: snapshot.mix.overdue, color: "#EF4444" },
+    { label: "Promised soon", value: snapshot.mix.upcoming, color: "#F59E0B" },
+    { label: "Later / unscheduled", value: snapshot.mix.later, color: "#2EC4B6" },
+  ];
+  const agingItems = (Object.keys(AGING_LABELS) as AgingKey[]).map((key) => ({
+    key,
+    label: AGING_LABELS[key],
+    value: snapshot.aging[key],
+    color: AGING_COLORS[key],
+  }));
+
+  return (
+    <>
 
       <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#128C86] via-[#2EC4B6] to-[#7DD3FC] p-5 text-white shadow-[0_18px_40px_rgba(18,140,134,0.28)]">
         <div className="absolute -top-10 -right-8 size-36 rounded-full bg-white/15" />
@@ -231,7 +249,7 @@ export default async function HomePage() {
       ) : null}
 
       <CompanyStamp />
-    </div>
+    </>
   );
 }
 
