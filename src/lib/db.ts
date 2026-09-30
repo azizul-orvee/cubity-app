@@ -14,6 +14,12 @@ function pooledUrl() {
   return next.toString();
 }
 
+// Local dev must never touch production. `.env` points at the Homebrew
+// Postgres database `cubity_dev`; a Neon URL here means prod leaked back in.
+if (process.env.NODE_ENV === "development" && process.env.DATABASE_URL?.includes("neon.tech")) {
+  throw new Error("DATABASE_URL points at Neon (production). Use the local cubity_dev database in .env.");
+}
+
 const databaseUrl = pooledUrl();
 
 export const prisma =

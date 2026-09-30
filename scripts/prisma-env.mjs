@@ -30,6 +30,18 @@ if (direct) {
 }
 
 const command = process.argv[2];
+
+// Writing commands from this machine must hit the local database, never Neon.
+// Vercel builds (VERCEL=1) are the only place `migrate` may run against production.
+const remote = [process.env.DATABASE_URL, process.env.DATABASE_URL_UNPOOLED].some((url) =>
+  url?.includes("neon.tech"),
+);
+if (remote && !process.env.VERCEL && command !== "generate") {
+  console.error(
+    `Refusing to run prisma ${command} against Neon (production) from a local machine. Point .env at the local cubity_dev database.`,
+  );
+  process.exit(1);
+}
 const args = commands[command];
 if (!args) {
   console.error(`Unknown prisma-env command: ${command}`);

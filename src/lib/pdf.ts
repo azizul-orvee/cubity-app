@@ -493,9 +493,18 @@ export async function buildClientStatementPdf(
   const status = clientStatus(client);
   const lines = runningLedger(client.entries);
 
+  const title = "DUE STATEMENT";
+  const meta = `Issued ${format(new Date(), "dd MMMM yyyy")}`;
   let page = pdf.addPage([PAGE.width, PAGE.height]);
-  let { width, height } = page.getSize();
-  let y = drawLetterhead(page, logo, { regular, bold }, "DUE STATEMENT", `Issued ${format(new Date(), "dd MMMM yyyy")}`);
+  let { width } = page.getSize();
+  let y = drawLetterhead(page, logo, { regular, bold }, title, meta);
+
+  // Every page after the first carries the same letterhead.
+  function nextPage() {
+    page = pdf.addPage([PAGE.width, PAGE.height]);
+    ({ width } = page.getSize());
+    return drawLetterhead(page, logo, { regular, bold }, title, meta);
+  }
 
   drawText(page, "BILLED TO", MARGIN, y, regular, 8, MUTED);
   drawText(page, client.name, MARGIN, y - 16, bold, 14, INK);
@@ -676,9 +685,7 @@ export async function buildClientStatementPdf(
     const rowHeight = 22 + Math.max(0, wrapped.length - 1) * 13;
 
     if (y - rowHeight < 128) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-      ({ width, height } = page.getSize());
-      y = height - 48;
+      y = nextPage();
       headerRow(page, y);
       y -= 26;
     }
@@ -718,10 +725,7 @@ export async function buildClientStatementPdf(
   y -= 18;
   if (showDiscount) {
     if (y < 120) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-      ({ width, height } = page.getSize());
-      page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
-      y = height - 48;
+      y = nextPage();
     }
     drawRight(page, "Billed", cols.pending - 8, y, regular, 10, MUTED);
     drawText(page, formatMoneyPdf(status.totalDue), cols.pending, y, regular, 10, INK);
@@ -739,10 +743,7 @@ export async function buildClientStatementPdf(
   y -= 32;
   if (client.notes) {
     if (y < 200) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-      ({ width, height } = page.getSize());
-      page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
-      y = height - 36;
+      y = nextPage();
     }
     drawTracked(page, "NOTES", MARGIN, y, bold, 8, 0.8, MUTED);
     y -= 14;
@@ -755,10 +756,7 @@ export async function buildClientStatementPdf(
 
   const remittanceHeight = 154;
   if (y < 80 + remittanceHeight) {
-    page = pdf.addPage([PAGE.width, PAGE.height]);
-    ({ width, height } = page.getSize());
-    page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
-    y = height - 40;
+    y = nextPage();
   }
 
   drawPaymentInstructions(
@@ -786,15 +784,18 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
 
   const total = withDues.reduce((sum, item) => sum + item.status.outstanding, 0);
 
+  const title = "OUTSTANDING RECEIVABLES";
+  const meta = `${format(new Date(), "dd MMMM yyyy")}  ·  ${withDues.length} client${withDues.length === 1 ? "" : "s"}`;
   let page = pdf.addPage([PAGE.width, PAGE.height]);
-  let { width, height } = page.getSize();
-  let y = drawLetterhead(
-    page,
-    logo,
-    { regular, bold },
-    "OUTSTANDING RECEIVABLES",
-    `${format(new Date(), "dd MMMM yyyy")}  ·  ${withDues.length} client${withDues.length === 1 ? "" : "s"}`,
-  );
+  let { width } = page.getSize();
+  let y = drawLetterhead(page, logo, { regular, bold }, title, meta);
+
+  // Every page after the first carries the same letterhead.
+  function nextPage() {
+    page = pdf.addPage([PAGE.width, PAGE.height]);
+    ({ width } = page.getSize());
+    return drawLetterhead(page, logo, { regular, bold }, title, meta);
+  }
 
   page.drawRectangle({
     x: MARGIN,
@@ -815,9 +816,7 @@ export async function buildOutstandingSummaryPdf(clients: ClientWithEntries[]) {
 
   for (const [index, item] of withDues.entries()) {
     if (y < 90) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-      ({ width, height } = page.getSize());
-      y = height - 48;
+      y = nextPage();
     }
     if (index % 2 === 0) {
       page.drawRectangle({ x: MARGIN, y: y - 8, width: width - MARGIN * 2, height: 20, color: WASH });
@@ -885,15 +884,18 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   const showDiscount = discount > 0;
   const payments = [...invoice.payments].sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  const title = "INVOICE";
+  const meta = `Invoice ID: ${invoice.number}  ·  Issued ${format(invoice.issueDate, "dd MMMM yyyy")}`;
   let page = pdf.addPage([PAGE.width, PAGE.height]);
-  let { width, height } = page.getSize();
-  let y = drawLetterhead(
-    page,
-    logo,
-    { regular, bold },
-    "INVOICE",
-    `Invoice ID: ${invoice.number}  ·  Issued ${format(invoice.issueDate, "dd MMMM yyyy")}`,
-  );
+  let { width } = page.getSize();
+  let y = drawLetterhead(page, logo, { regular, bold }, title, meta);
+
+  // Every page after the first carries the same letterhead.
+  function nextPage() {
+    page = pdf.addPage([PAGE.width, PAGE.height]);
+    ({ width } = page.getSize());
+    return drawLetterhead(page, logo, { regular, bold }, title, meta);
+  }
 
   drawText(page, "BILLED TO", MARGIN, y, regular, 8, MUTED);
   drawText(page, invoice.clientName, MARGIN, y - 16, bold, 14, INK);
@@ -912,7 +914,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   }
 
   const boxWidth = 232;
-  const boxHeight = 108 + payments.length * 14 + (showDiscount ? 28 : 0);
+  const boxHeight = 94 + payments.length * 14;
   const box = {
     x: width - MARGIN - boxWidth,
     width: boxWidth,
@@ -936,24 +938,13 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     color: HAIR,
   });
   boxY -= 14;
-  drawText(page, "Total amount", innerLeft, boxY, regular, 9, MUTED);
-  drawRight(page, formatMoneyPdf(total), innerRight, boxY, bold, 9, INK);
-  if (showDiscount) {
-    boxY -= 14;
-    drawText(page, "Discount", innerLeft, boxY, regular, 9, MUTED);
-    drawRight(page, formatMoneyPdf(discount), innerRight, boxY, regular, 9, INK);
-    boxY -= 14;
-    drawText(page, "After discount", innerLeft, boxY, regular, 9, MUTED);
-    drawRight(page, formatMoneyPdf(net), innerRight, boxY, bold, 9, INK);
-  }
   for (const payment of payments) {
-    boxY -= 14;
     drawText(page, format(payment.date, "dd MMM yyyy"), innerLeft, boxY, regular, 9, MUTED);
     drawRight(page, formatMoneyPdf(payment.amount), innerRight, boxY, regular, 9, INK);
+    boxY -= 14;
   }
-  boxY -= 14;
   drawText(page, "Paid", innerLeft, boxY, regular, 9, MUTED);
-  drawRight(page, formatMoneyPdf(invoice.paidAmount), innerRight, boxY, regular, 9, INK);
+  drawRight(page, formatMoneyPdf(invoice.paidAmount), innerRight, boxY, bold, 9, INK);
 
   y = Math.min(detailY, box.bottom) - 28;
 
@@ -986,9 +977,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
     const wrapped = wrapText(line.serviceName, regular, 9, particularsWidth, 2);
     const rowHeight = 22 + Math.max(0, wrapped.length - 1) * 13;
     if (y - rowHeight < 128) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-      ({ width, height } = page.getSize());
-      y = height - 48;
+      y = nextPage();
       headerRow(page, y);
       y -= 26;
     }
@@ -1012,10 +1001,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   }
 
   if (y < 160) {
-    page = pdf.addPage([PAGE.width, PAGE.height]);
-    ({ width, height } = page.getSize());
-    page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
-    y = height - 48;
+    y = nextPage();
   }
 
   y -= 16;
@@ -1047,10 +1033,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
   y = Math.min(y, sealBottom) - 22;
   if (invoice.notes) {
     if (y < 200) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-      ({ width, height } = page.getSize());
-      page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
-      y = height - 36;
+      y = nextPage();
     }
     drawTracked(page, "NOTES", MARGIN, y, bold, 8, 0.8, MUTED);
     y -= 14;
@@ -1063,10 +1046,7 @@ export async function buildInvoicePdf(invoice: InvoicePdfData, payment: PaymentI
 
   const remittanceHeight = 154;
   if (y < 80 + remittanceHeight) {
-    page = pdf.addPage([PAGE.width, PAGE.height]);
-    ({ width, height } = page.getSize());
-    page.drawRectangle({ x: 0, y: height - 5, width, height: 5, color: TEAL });
-    y = height - 40;
+    y = nextPage();
   }
 
   drawPaymentInstructions(page, y, width, { regular, bold }, { bkash: bkashLogo, nrb: nrbLogo }, payment);

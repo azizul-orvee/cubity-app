@@ -7,6 +7,8 @@
     "build": "node scripts/prisma-env.mjs generate && node scripts/prisma-env.mjs migrate && next build",
     "start": "next start",
     "lint": "eslint",
+    "db:migrate": "node scripts/prisma-env.mjs migrate",
+    "db:seed": "node --env-file=.env scripts/seed.mjs",
     "db:push": "node scripts/prisma-env.mjs push",
     "db:studio": "node scripts/prisma-env.mjs studio",
     "postinstall": "node scripts/prisma-env.mjs generate"

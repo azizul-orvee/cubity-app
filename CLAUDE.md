@@ -23,15 +23,17 @@ Currency is always **Tk** (Bangladeshi Taka) — never `$` or `BDT`. Dates are `
 
 ## Guardrails (from `.cursor/rules/`)
 
-- **Live database.** `.env` points at the production Neon database, so any write from this machine changes live data. `npm run build` runs `prisma migrate deploy` before `next build`, so **do not run `npm run build` locally** without the user's OK. Type-check with `npx tsc --noEmit` instead. `npm run db:push` and `db:studio` edits also count as writes. `prisma generate` is safe.
+- **Local database.** `.env` points at a local Homebrew Postgres 17 database, `cubity_dev` — never at production. Production Neon URLs live only in Vercel. `src/lib/db.ts` throws in development and `scripts/prisma-env.mjs` refuses `migrate`/`push`/`studio` when a `neon.tech` URL is set outside Vercel (`VERCEL=1`). Writes to `cubity_dev` are fine; apply migrations there with `npm run db:migrate`. Type-check with `npx tsc --noEmit`.
 - **Git.** Only run `git commit` or `git push` (including `--amend`) when the user asks for it in the current message.
-- **Docs.** `docs/APP.md` is the product source of truth: screens, features, data, deploy, and the mobile wrappers. After any user-visible or data-model change, update the matching section in the same turn and add a changelog entry at the top (`- YYYY-MM-DD — summary.`). Don't create new doc files for small changes.
+- **Docs.** `docs/APP.md` is the product source of truth: screens, features, data, deploy, and the mobile wrappers. After any user-visible or data-model change, update the matching section in the same turn and add a changelog entry at the top (`- YYYY-MM-DD — summary.`). Don't create new doc files for small changes. Alongside it, `docs/ai/` is the engineering memory: read `docs/ai/STATUS.md` + the latest `docs/ai/CHANGELOG.md` entries at session start, and after each change add a `docs/ai/CHANGELOG.md` entry and update `STATUS.md` (plus `ARCHITECTURE` / `PROJECT` / `DECISIONS` when relevant). Rules in `AGENTS.md` → Documentation rules.
 - **Secret.** The accountant password lives in code (`src/lib/workspace-role.ts`). Don't move it to env, don't print it in docs, chat, or commit messages.
 
 ## Commands
 
 ```bash
-npm run dev          # next dev (uses the live Neon DB from .env)
+npm run dev          # next dev against the local cubity_dev database
+npm run db:migrate   # prisma migrate deploy against the local database
+npm run db:seed      # wipe cubity_dev and fill it with fake data (scripts/seed.mjs)
 npm run lint         # eslint (flat config, next core-web-vitals + typescript)
 npx tsc --noEmit     # type-check without building/migrating
 ```

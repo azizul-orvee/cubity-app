@@ -7,8 +7,12 @@ App for Cubity Engineering & Construction to track client dues, partial payments
 ## Run
 
 ```bash
+brew services start postgresql@17
+createdb cubity_dev
+cp .env.example .env   # set your macOS user in both URLs
 npm install
-npx prisma db push
+npm run db:migrate
+npm run db:seed   # optional fake data
 npm run dev
 ```
 

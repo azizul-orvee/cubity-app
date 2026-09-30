@@ -10,13 +10,18 @@ Currency is shown as **Tk** (Bangladeshi Taka). Data lives in **Neon Postgres**.
 
 ## Run locally
 
-Copy `.env.example` to `.env` and paste Neon `DATABASE_URL` (pooled) plus `DATABASE_URL_UNPOOLED` (direct). Then:
+Local development uses its own Postgres database on the Mac (Homebrew `postgresql@17`, database `cubity_dev`), so nothing you do locally touches the real office data. Copy `.env.example` to `.env` and put your macOS user name in both URLs. Then:
 
 ```bash
+brew services start postgresql@17
+createdb cubity_dev
 npm install
-npx prisma migrate deploy
+npm run db:migrate
+npm run db:seed   # optional: fake clients, dues, payments, invoices
 npm run dev
 ```
+
+The local database starts empty; `npm run db:seed` wipes it and fills it with made-up clients and invoices (overdue, upcoming, unscheduled, settled, credit, a discount, a voided payment, and a bill already on a client's ledger). Production Neon URLs live only in Vercel; the dev server and the Prisma scripts refuse to run against a Neon URL from a local machine.
 
 Open [http://localhost:3000](http://localhost:3000) (or the port Next.js prints if 3000 is busy).
 
@@ -55,7 +60,7 @@ Opening **Receivables** asks whether you are the **accountant** or an **engineer
 | `/invoices/[id]/client` | Two tabs. **New client** (the default when nothing is linked) adds the person to Receivables using the invoice's own name, phone, address, and site/project, all editable, and links the bill in one step; it refuses if another client already uses that phone number. **Someone on the ledger** picks an existing client, searchable by name or phone with the likely match first. Removing an existing link is its own separate button. accountant only |
 | `/invoices/[id]/ledger` | Put the bill on that client's ledger: due date (defaults to the issue date) and an optional promised date. Shows what they will owe after it is added. accountant only |
 | `/invoices/[id]/edit` | Change the invoice ID, client, or the selected services and amounts. Payments stay as they are. Saving is blocked if the new total is below what has already been paid, or if the bill is already on a client's ledger and the total would change |
-| `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. Each receipt is listed once, in the amount-due box, with its date. Under the particulars, total amount, paid, and total due sit beside the Cubity stamp (green Paid, purple Partial payment, or red Unpaid). The ID is printed under INVOICE in the letterhead |
+| `/invoices/[id]/pdf` | Download that invoice PDF. The file is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`. The amount-due box shows the amount due, then only each receipt with its date and the paid total in bold (billed, discount, and total after discount are shown under the particulars instead). Under the particulars, total amount, paid, and total due sit beside the Cubity stamp (green Paid, purple Partial payment, or red Unpaid). The ID is printed under INVOICE in the letterhead |
 | `/invoices/services` | Add a service at the top, then rename, set its usual amount, or remove each one in the list (remove shows Undo). **The list is the office list, shared by every phone.** A phone that still has the old on-device list is offered a one-time "add these to the office list" card. Defaults are the five design services |
 
 Old `/clients` and `/reports/outstanding` URLs redirect into `/receivables/...`. Product paths live in `src/lib/routes.ts`.
@@ -128,7 +133,8 @@ Opening Clients (or a client account) from Home shows the **Cubity seal** only w
 - Per-client **due statement**: letterhead with logo on the left and two-line company name, title, and issue date on the right; no header address. Outstanding panel with billed/paid/promised (and next installment if they promised only part of the balance). When a discount is set, the panel and the totals under the ledger also show Discount and Total after discount, and the amount still pending is the billed total minus discount minus what was paid. A gap before the ledger, **Pending** column, and outstanding amounts in red. Particulars wrap onto a second line when long. Due / Paid / Pending headers sit on the same left edge as their amounts. Below the ledger, **payment instructions** show a bKash personal wallet and an NRB bank transfer card (real logos plus account details). Footer uses location, phone, and email icons.
 - Payment details are edited at `/receivables/settings` (gear in the receivables header). Defaults: bKash `01973 914236`; NRB Bank, Sylhet Main Branch, MD TAREK AHMED, A/C `7087010002828`, routing `290913794`.
 - Company **outstanding receivables** list with office address and phones
-- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. Every receipt is listed once, in the amount-due box, with its date. Under the particulars, the total amount is shown in bold, then paid and total due, beside a Cubity stamp: green Paid, purple Partial payment, or red Unpaid. File name is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`.
+- **Page 2 and beyond:** when a due statement, invoice, or outstanding summary runs past one page, every new page starts with the same letterhead (logo, company name, document title, and date/ID line).
+- **Invoice PDF**: same letterhead, teal table, amount-due panel, bKash and bank cards, and office footer as the due statement. The amount-due box shows only the amount due, each receipt with its date, and the paid total in bold. Under the particulars, the total amount is shown in bold, then paid and total due, beside a Cubity stamp: green Paid, purple Partial payment, or red Unpaid. File name is `Invoice-{ID}-Paid.pdf`, `Invoice-{ID}-Unpaid.pdf`, or `Invoice-{ID}-PartialPaid.pdf`.
 - Both downloads ask for confirmation first (Not now / Download). Same dialog on the website and in the Android app.
 
 ### Extra (beyond the original request)
@@ -183,7 +189,7 @@ Neon's own restore history (Branches → Restore) still works too; this copy is 
 4. Build runs `prisma generate` then `prisma migrate deploy` then `next build`, which creates tables on Neon.
 5. Open https://cubity-app.vercel.app
 
-Local: copy `.env.example` to `.env` / `.env.local` and paste your Neon URLs. `npm run dev` then uses the same cloud database.
+Local: see **Run locally** — `npm run dev` uses the local `cubity_dev` database, never Neon.
 
 ## Android APK
 
@@ -244,7 +250,7 @@ Cursor always applies:
 
 - Update this file whenever the app changes
 - Never `git commit` or `git push` unless you confirm in chat
-- Never change the database unless you confirm in chat. Local `.env` points at the production Neon database, so a local write is a live write. The same instruction is in `AGENTS.md` for assistants outside Cursor.
+- Never change the production database unless you confirm in chat. Local `.env` points at the local `cubity_dev` database, and the code refuses a Neon URL in local dev. The same instruction is in `AGENTS.md` for assistants outside Cursor.
 
 When editing receivables (`src/app/receivables/`, `src/lib/routes.ts`, roles, money, `AppShell`):
 
@@ -278,6 +284,14 @@ An invoice can be **linked to a receivables client** and then **added to their l
 - `InvoicePayment` — one receipt on that invoice: amount, date, optional note. The paid total is the sum of these receipts. A later payment is another row on the same invoice, not a new invoice
 
 ## Changelog
+
+- 2026-09-30 — Long PDFs (due statement, invoice, outstanding summary) repeat the Cubity letterhead at the top of every page, not only the first.
+
+- 2026-09-30 — The amount-due box at the top right of an invoice PDF no longer repeats total amount, discount, and total after discount (they are already under the particulars). It lists only the receipt dates and the paid total, which is now bold.
+
+- 2026-09-28 — Added `npm run db:seed`, which fills the local database with made-up clients and invoices for testing.
+
+- 2026-09-28 — Local development now has its own database on the Mac (`cubity_dev`). The production database address was removed from the local setup, so testing on a laptop can no longer change the office's real data.
 
 - 2026-09-27 — Every screen now has its own loading state, so tapping something shows that screen straight away instead of holding the previous one until the database answers. Forms and lists show a grey sketch of what is coming; the dashboard sketches its hero card, rings and charts, and its heading appears immediately while the slow query finishes underneath. The Cubity seal now only appears if a screen takes longer than a moment to open, rather than flashing on every tap.
 
